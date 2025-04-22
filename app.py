@@ -1,26 +1,31 @@
 
-from flask import Flask, render_template, redirect, url_for, request, session, abort, flash
-from dotenv import load_dotenv
-import logging
-from datetime import datetime, timedelta
+from flask import Flask, render_template, redirect, url_for, request, session, abort, flash, jsonify
+import markdown
 import os
+import re
+import json
+import time
+import hmac
+import hashlib
+import requests
+import logging
+import uuid
+from dotenv import load_dotenv
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from werkzeug.security import generate_password_hash
+from datetime import timedelta, datetime
+from models import db, User, Module, Submodule, ModuleCompletion, UserLog, PaymentPlan, Payment, EmailLog
+import functools
+from flask_mail import Mail, Message
+import threading
 from extensions import db, csrf, limiter, mail
-from models import User, ModuleCompletion, UserLog, Payment, PaymentPlan, EmailLog, Module, Submodule
 
 # Load environment variables
 load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
-
-# Configure logging
-logging.basicConfig(
-    filename='app.log',
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger('blackmoby')
 
 # Configure Flask app
 app.config.update(
@@ -40,9 +45,17 @@ app.config.update(
 
 # Initialize extensions
 db.init_app(app)
-csrf.init_app(app)
-limiter.init_app(app)
 mail.init_app(app)
+limiter.init_app(app)
+csrf.init_app(app)
+
+# Configure logging
+logging.basicConfig(
+    filename='app.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('blackmoby')
 
 # Import routes after app is created to avoid circular imports
 from routes.admin import admin_bp
