@@ -1,1 +1,532 @@
-<h1>Welcome to Black Hat Manual</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Black Mink Labs</title>
+    <link rel="stylesheet" href="/static/style/landing.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="light-mode">
+    <header>
+        <div class="container">
+          <nav class="minimal-nav">
+            <div class="nav-left">
+            <a href="/" class="text-logo">
+                &gt;_Black_Mink_Labs
+            </a>
+                
+            </div>
+
+            <div class="nav-center">
+              <a href="/" class="nav-logo">
+                <img src="static/gui/mink1.png" alt="MINK Logo" />
+              </a>
+            </div>
+
+            <div class="nav-right">
+              <a href="/login" class="nav-login">&gt;_Login</a>
+              <div class="theme-toggle">
+                  <i class="fas fa-moon"></i>
+              </div>
+            </div>
+            
+          </nav>
+
+        </div>
+    </header>
+    <!-- Hero Section -->
+    <section class="hero framed-hero" id="home">
+      <!-- Terminal background -->
+      <div class="terminal-bg"></div>
+
+      <!-- Middle vertical lines (new) -->
+      <div class="middle-v-lines">
+        <div class="v-line">
+          <span class="vertical-bash">$ netstat -tuln</span>
+        </div>
+        <div class="v-line">
+          <span class="vertical-bash">$ ps aux | grep root</span>
+        </div>
+      </div>
+
+      <!-- Outer frame lines (left & right) -->
+      <div class="frame-lines left">
+        <div class="v-line">
+          <span class="vertical-bash">$ curl -s endpoint</span>
+        </div>
+        <div class="v-line">
+          <span class="vertical-bash">$ ssh admin@host</span>
+        </div>
+      </div>
+      <div class="frame-lines right">
+        <div class="v-line">
+          <span class="vertical-bash">$ whoami</span>
+        </div>
+        <div class="v-line">
+          <span class="vertical-bash">$ chmod +x script.sh</span>
+        </div>
+      </div>
+      <div class="container">
+        <div class="hero-grid">
+          <!-- Top horizontal lines -->
+          <div class="h-line-row top">
+            <div class="h-line">
+              <span class="bash-label">$ echo 'hello'</span>
+            </div>
+            <div class="h-line">
+              <span class="bash-label">$ whoami</span>
+            </div>
+          </div>
+          <!-- Center grid with content -->
+          <div class="content-grid">
+            <!-- Left vertical lines -->
+            <div class="v-line-column left">
+              <div class="v-line">
+                <span class="vertical-bash">$ uptime</span>
+              </div>
+              <div class="v-line">
+                <span class="vertical-bash">$ ls -la</span>
+              </div>
+            </div>
+            <!-- Main hero content -->
+            <div class="hero-card">
+              <div class="hero-content">
+                <h1>Master Hacking.<br>No Fluff. Just Skills.</h1>
+                <p>Practical, hands-on cybersecurity training for the modern hacker.</p>
+                <div class="hero-cta">
+                  <a href="#modules" class="btn btn-solid">Explore Modules</a>
+                  <a href="/register" class="btn btn-outline">Start Learning</a>
+                </div>
+              </div>
+            </div>
+            <!-- Right vertical lines -->
+            <div class="v-line-column right">
+              <div class="v-line">
+                <span class="vertical-bash">$ find / -name flag</span>
+              </div>
+              <div class="v-line">
+                <span class="vertical-bash">$ chmod +x exploit.sh</span>
+              </div>
+            </div>
+          </div>
+          <!-- Middle horizontal lines (behind card) -->
+          <div class="h-line-row middle">
+            <div class="h-line">
+              <span class="bash-label">$ grep -r "password"</span>
+            </div>
+            <div class="h-line">
+              <span class="bash-label">$ sudo -l</span>
+            </div>
+          </div>
+          <!-- Bottom horizontal lines -->
+          <div class="h-line-row bottom">
+            <div class="h-line">
+              <span class="bash-label">$ nmap -sV target</span>
+            </div>
+            <div class="h-line">
+              <span class="bash-label">$ cat flag.txt</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    
+    <section class="modules-section" id="modules">
+      <div class="container">
+        <div class="section-header">
+          <h2>Training Modules</h2>
+          <p>Practical, hands-on cybersecurity training</p>
+        </div>
+
+        <div class="modules-grid">
+          <!-- Module 1 -->
+          <div class="module-card">
+            <div class="module-icon">
+              <i class="fas fa-network-wired"></i>
+            </div>
+            <div class="module-content">
+              <h3>OS Basics</h3>
+              <p>Master the fundamentals of system administration</p>
+            </div>
+          </div>
+
+          <!-- Module 2 -->
+          <div class="module-card">
+            <div class="module-icon">
+              <i class="fas fa-terminal"></i>
+            </div>
+            <div class="module-content">
+              <h3>Networking for Hackers</h3>
+              <p>Navigate, manipulate and exploit network protocols</p>
+            </div>
+          </div>
+
+          <!-- Module 3 -->
+          <div class="module-card">
+            <div class="module-icon">
+              <i class="fas fa-code"></i>
+            </div>
+            <div class="module-content">
+              <h3>Scripting</h3>
+              <p>Automate attacks and develop custom tools</p>
+            </div>
+          </div>
+
+          <!-- Module 4 -->
+          <div class="module-card">
+            <div class="module-icon">
+              <i class="fas fa-bug"></i>
+            </div>
+            <div class="module-content">
+              <h3>Exploitation Basics</h3>
+              <p>Craft exploits for discovered vulnerabilities</p>
+            </div>
+          </div>
+
+          <!-- Module 5 -->
+          <div class="module-card">
+            <div class="module-icon">
+              <i class="fas fa-sitemap"></i>
+            </div>
+            <div class="module-content">
+              <h3>Active Directory</h3>
+              <p>Attack and defend Windows enterprise environments</p>
+            </div>
+          </div>
+
+          <!-- Module 6 -->
+          <div class="module-card">
+            <div class="module-icon">
+              <i class="fas fa-globe"></i>
+            </div>
+            <div class="module-content">
+              <h3>WebApp Hacking</h3>
+              <p>Discover and exploit web application flaws</p>
+            </div>
+          </div>
+
+          <!-- Module 7 (Hidden) -->
+          <div class="module-card hidden">
+            <div class="module-icon">
+              <i class="fas fa-plug"></i>
+            </div>
+            <div class="module-content">
+              <h3>Hacking APIs</h3>
+              <p>Test and exploit API vulnerabilities</p>
+            </div>
+          </div>
+
+          <!-- Module 8 (Hidden) -->
+          <div class="module-card hidden">
+            <div class="module-icon">
+              <i class="fas fa-virus"></i>
+            </div>
+            <div class="module-content">
+              <h3>Malware Development</h3>
+              <p>Create and analyze malicious software</p>
+            </div>
+          </div>
+
+          <!-- Module 9 (Hidden) -->
+          <div class="module-card hidden">
+            <div class="module-icon">
+              <i class="fas fa-microchip"></i>
+            </div>
+            <div class="module-content">
+              <h3>Electronics for Hackers</h3>
+              <p>Hardware hacking and physical security bypass</p>
+            </div>
+          </div>
+
+          <!-- Module 10 (Hidden) -->
+          <div class="module-card hidden">
+            <div class="module-icon">
+              <i class="fas fa-wifi"></i>
+            </div>
+            <div class="module-content">
+              <h3>Wireless Hacking</h3>
+              <p>Compromise WiFi, Bluetooth and RF communications</p>
+            </div>
+          </div>
+
+          <!-- Module 11 (Hidden) -->
+          <div class="module-card hidden">
+            <div class="module-icon">
+              <i class="fas fa-search"></i>
+            </div>
+            <div class="module-content">
+              <h3>Forensics for Hackers</h3>
+              <p>Discover and analyze digital evidence</p>
+            </div>
+          </div>
+
+          <!-- Module 12 (Hidden) -->
+          <div class="module-card hidden">
+            <div class="module-icon">
+              <i class="fas fa-shield-alt"></i>
+            </div>
+            <div class="module-content">
+              <h3>Advanced Defense</h3>
+              <p>Securing systems against common attack vectors</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="view-more">
+          <button id="viewAllModules" class="btn btn-outline">View All Modules</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- How Black Mink Lab Works Section -->
+    <section class="how-it-works" id="how-it-works">
+      <div class="container">
+        <div class="section-header">
+          <h2>How Black Mink Labs Works</h2>
+          <p>A straightforward journey to mastery</p>
+        </div>
+        <div class="steps-container">
+          <div class="step-card">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <h3>Read</h3>
+              <p>Dive into short, no-fluff walkthroughs.</p>
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <h3>Do</h3>
+              <p>Launch labs, hack real systems.</p>
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <h3>Build</h3>
+              <p>Code your own tools, scripts, exploits.</p>
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="step-number">4</div>
+            <div class="step-content">
+              <h3>Level Up</h3>
+              <p>Tackle capstone boxes built to test you.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Why Choose Black Mink Labs Section -->
+    <section class="why-choose" id="why-choose">
+      <div class="container">
+        <div class="section-header">
+          <h2>What Makes Us Different</h2>
+          <p>No-nonsense hacking education</p>
+        </div>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">🧠</div>
+            <div class="feature-content">
+              <h3>Text-Based Learning</h3>
+              <p>Faster, deeper, no distractions</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🔥</div>
+            <div class="feature-content">
+              <h3>No Certifications</h3>
+              <p>Learn to hack, not to pass a test</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">⚔️</div>
+            <div class="feature-content">
+              <h3>Tool-Building Mindset</h3>
+              <p>You write the code</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🏢</div>
+            <div class="feature-content">
+              <h3>Real-World Labs</h3>
+              <p>Messy networks, like real companies</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🎯</div>
+            <div class="feature-content">
+              <h3>Learn > Do > See Results</h3>
+              <p>Minimal theory, maximum action</p>
+            </div>
+          </div>
+        </div>
+        <div class="quote-callout">
+          <blockquote>"You don't need permission to hack. You need skills. We show you how to get them."</blockquote>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <img src="static/gui/mink1.png" alt="MINK Logo">
+                    <p>Pure hacking. No fluff.</p>
+                </div>
+                    <div class="link-group">
+                        <h4>Legal</h4>
+                        <ul>
+                            <li><a href="/terms">Terms</a></li>
+                            <li><a href="/privacy">Privacy</a></li>
+                            <li><a href="/ethics">Code of Ethics</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025  Black Mink Labs. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+            document.addEventListener('DOMContentLoaded', function() {
+              // View All Modules button logic
+              const viewAllButton = document.getElementById('viewAllModules');
+              const hiddenModules = document.querySelectorAll('.module-card.hidden');
+              let allModulesShown = false;
+
+              if (viewAllButton) {
+                viewAllButton.addEventListener('click', function() {
+                  if (!allModulesShown) {
+                    // Show all hidden modules
+                    hiddenModules.forEach(module => {
+                      module.classList.remove('hidden');
+                    });
+
+                    // Change button text
+                    viewAllButton.textContent = 'Show Fewer Modules';
+
+                    // Optional: Scroll slightly to show new content
+                    setTimeout(() => {
+                      window.scrollBy({
+                        top: 100,
+                        behavior: 'smooth'
+                      });
+                    }, 100);
+
+                    allModulesShown = true;
+                  } else {
+                    // Hide modules again
+                    hiddenModules.forEach(module => {
+                      module.classList.add('hidden');
+                    });
+
+                    // Restore button text
+                    viewAllButton.textContent = 'View All Modules';
+
+                    // Optional: Scroll back up slightly
+                    setTimeout(() => {
+                      window.scrollBy({
+                        top: -100,
+                        behavior: 'smooth'
+                      });
+                    }, 100);
+
+                    allModulesShown = false;
+                  }
+                });
+              }
+
+          // Theme toggle functionality
+          const themeToggle = document.querySelector('.theme-toggle');
+          if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+              document.body.classList.toggle('dark-mode');
+              document.body.classList.toggle('light-mode');
+
+              // Update icon
+              const icon = themeToggle.querySelector('i');
+              if (icon.classList.contains('fa-moon')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+              } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+              }
+            });
+          }
+
+          // Add navigation arrows to each section
+          const sections = document.querySelectorAll('.section, .hero');
+          sections.forEach((section, index) => {
+            // Don't add arrow to the last section
+            if (index < sections.length - 1) {
+              const arrow = document.createElement('div');
+              arrow.className = 'section-arrow';
+              arrow.innerHTML = '<i class="fas fa-chevron-down"></i>';
+
+              // Add click event to scroll to next section
+              arrow.addEventListener('click', () => {
+                const nextSection = sections[index + 1];
+                nextSection.scrollIntoView({ behavior: 'smooth' });
+              });
+
+              section.appendChild(arrow);
+            }
+          });
+
+          // FAQ accordion
+          const faqItems = document.querySelectorAll('.faq-item');
+          faqItems.forEach(item => {
+            const question = item.querySelector('.faq-question');
+            question.addEventListener('click', () => {
+              item.classList.toggle('active');
+              const toggle = question.querySelector('.toggle i');
+              toggle.classList.toggle('fa-plus');
+              toggle.classList.toggle('fa-minus');
+            });
+          });
+
+          // Simple testimonial slider
+          const dots = document.querySelectorAll('.slider-dot');
+          const testimonials = document.querySelectorAll('.testimonial');
+
+          dots.forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+              // Update active dot
+              document.querySelector('.slider-dot.active').classList.remove('active');
+              dot.classList.add('active');
+
+              // Show appropriate testimonial
+              testimonials.forEach(t => t.style.display = 'none');
+              testimonials[index].style.display = 'block';
+            });
+          });
+
+          // Initialize slider
+          testimonials.forEach((t, i) => {
+            if (i !== 0) t.style.display = 'none';
+          });
+
+          // Smooth scrolling for anchor links
+          document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+              e.preventDefault();
+              const target = document.querySelector(this.getAttribute('href'));
+              if (target) {
+                window.scrollTo({
+                  top: target.offsetTop,
+                  behavior: 'smooth'
+                });
+              }
+            });
+          });
+        });
+    </script>
+</body>
+</html>

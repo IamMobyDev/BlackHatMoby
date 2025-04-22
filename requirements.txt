@@ -1,2 +1,11 @@
 flask
 gunicorn
+markdown
+flask-limiter
+werkzeug
+flask-wtf
+wtforms
+python-dotenv
+flask-sqlalchemy
+requests
+flask-mail

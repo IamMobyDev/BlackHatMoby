@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ module.replace('-', ' ').title() }} | Module</title>
+    <!-- Load base CSS first, then page-specific CSS -->
+    <link href="{{ url_for('static', filename='style/style.css') }}" rel="stylesheet" />
+    <link href="{{ url_for('static', filename='style/module_viewer.css') }}" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  </head>
+  <body class="module-viewer">
+    <!-- Top controls bar -->
+    <div class="top-controls">
+      <div class="left-section">
+        <button id="sidebarToggle" aria-label="Toggle sidebar">
+          ☰
+        </button>
+      </div>
+      <div class="center-section">
+        <img src="{{ url_for('static', filename='gui/mink1.png') }}" class="logo" alt="Logo" />
+      </div>
+      <div class="right-section">
+        <a href="{{ url_for('logout') }}" class="sign-out-button" aria-label="Sign out">
+          Sign out
+        </a>
+        <button id="themeToggle" aria-label="Toggle dark mode">
+          <span class="light-icon">☀️</span>
+          <span class="dark-icon" style="display:none">🌙</span>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Sidebar with independent scrolling -->
+    <div class="sidebar">
+      <!-- "All Modules" link at top -->
+      <a href="{{ url_for('modules') }}" class="back-to-modules">
+        <span class="arrow-icon">←</span> All Modules
+      </a>
+      
+      <h2 class="module-title">{{ module.replace('-', ' ').title() }}</h2>
+
+      <!-- Navigation with submodules -->
+      <nav class="sidebar-nav">
+        {% for sub in submodules %}
+        <div 
+          class="sub-module {% if selected_slug == sub.slug %}active{% endif %}"
+          data-slug="{{ sub.slug }}"
+        >
+          {{ sub.title }}
+        </div>
+        {% endfor %}
+      </nav>
+    </div>
+
+    <!-- Main content area with independent scrolling -->
+    <div class="content">
+      <div class="page-title fade-in">
+        {% if selected_slug_idx is not none and selected_slug_idx < submodules|length %}
+          <h1>{{ submodules[selected_slug_idx].title }}</h1>
+        {% else %}
+          <h1>{{ selected_slug|title }}</h1>
+        {% endif %}
+      </div>
+      
+      <div class="markdown-content fade-in">
+        {{ content|safe }}
+      </div>
+    </div>
+
+    <script>
+      // Theme Toggle Functionality
+      const themeToggle = document.getElementById("themeToggle");
+      const lightIcon = document.querySelector(".light-icon");
+      const darkIcon = document.querySelector(".dark-icon");
+      
+      // Check for saved theme preference or prefer-color-scheme
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const savedTheme = localStorage.getItem('theme');
+      
+      // Apply theme with a small delay to prevent flash
+      if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        setTimeout(() => {
+          document.body.classList.add('dark');
+          lightIcon.style.display = 'none';
+          darkIcon.style.display = 'inline';
+        }, 10);
+      }
+      
+      themeToggle.addEventListener("click", () => {
+        document.body.classList.toggle("dark");
+        const isDark = document.body.classList.contains('dark');
+        
+        // Toggle icon display
+        lightIcon.style.display = isDark ? 'none' : 'inline';
+        darkIcon.style.display = isDark ? 'inline' : 'none';
+        
+        // Save preference
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      });
+      
+      // Handle sub-module navigation with fade transitions
+      document.querySelectorAll('.sub-module').forEach(subModule => {
+        subModule.addEventListener('click', function() {
+          if (this.classList.contains('active')) return;
+          
+          const slug = this.dataset.slug;
+          
+          // Mark as active
+          document.querySelector('.sub-module.active')?.classList.remove('active');
+          this.classList.add('active');
+          
+          // Fade out content before navigating
+          const fadeElements = document.querySelectorAll('.fade-in');
+          fadeElements.forEach(el => {
+            el.style.opacity = '0';
+          });
+          
+          setTimeout(() => {
+            window.location.href = `{{ url_for('view_submodule', module=module, slug='') }}${slug}`;
+          }, 200);
+        });
+      });
+
+      // Fade in content on page load
+      window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+          document.querySelectorAll('.fade-in').forEach(el => {
+            el.style.transition = 'opacity 0.4s ease';
+            el.style.opacity = '1';
+          });
+        }, 50);
+      });
+      
+      // Sidebar toggle for mobile
+      const sidebarToggle = document.getElementById('sidebarToggle');
+      if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', () => {
+          document.body.classList.toggle('sidebar-open');
+        });
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="{{ url_for('static', filename='style/style.css') }}" rel="stylesheet" />
+    <link href="{{ url_for('static', filename='style/cnm.css') }}" rel="stylesheet" />
+    <title>Create New Module / Submodule</title>
+</head>
+<body>
+    <!-- Top navigation bar -->
+    <div class="top-bar">
+        <a href="{{ url_for('dashboard') }}">
+            <img src="{{ url_for('static', filename='gui/mink1.png') }}" alt="Logo" class="logo">
+        </a>
+        <button id="theme-toggle" class="btn btn-link">
+            <span id="theme-icon">☀️</span>
+        </button>
+    </div>
+
+    <div class="container">
+        <h1 class="page-title">Create New Module / Submodule</h1>
+        
+        <!-- Alert messages -->
+        {% if msg %}
+            <div class="message success">
+                <strong>Success!</strong> {{ msg }}
+            </div>
+        {% endif %}
+        {% if error %}
+            <div class="message error">
+                <strong>Error:</strong> {{ error }}
+            </div>
+        {% endif %}
+        
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <!-- Module Selection Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">1. Module Selection</h2>
+                </div>
+                <div class="card-body">
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="create-new" name="module_option" value="new" class="radio-input" checked>
+                            <label for="create-new" class="radio-label">Create New Module</label>
+                        </div>
+                        
+                        <div class="radio-option">
+                            <input type="radio" id="use-existing" name="module_option" value="existing" class="radio-input">
+                            <label for="use-existing" class="radio-label">Use Existing Module</label>
+                        </div>
+                    </div>
+                    
+                    <div id="new-module-section" class="option-section">
+                        <div class="form-group">
+                            <label for="new-module" class="form-label">New Module Folder Name</label>
+                            <input type="text" id="new-module" name="new_module" class="form-control" placeholder="e.g. python-basics">
+                        </div>
+                    </div>
+                    
+                    <div id="existing-module-section" class="option-section" style="display:none;">
+                        <div class="form-group">
+                            <label for="existing-module" class="form-label">Select Existing Module</label>
+                            <select id="existing-module" name="existing_module" class="form-control">
+                                <option value="">-- Select a module --</option>
+                                {% for module in existing_modules %}
+                                    <option value="{{ module }}">{{ module }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Submodule Details Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">2. Submodule Details</h2>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="slug" class="form-label">Submodule Slug (file name)</label>
+                        <input type="text" id="slug" name="slug" class="form-control" required placeholder="e.g. functions-basics">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="title" class="form-label">Submodule Title</label>
+                        <input type="text" id="title" name="title" class="form-control" required placeholder="e.g. Introduction to Python Functions">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="content" class="form-label">Content (Markdown)</label>
+                        <textarea id="content" name="content" class="form-control" required placeholder="# Introduction&#10;&#10;Write your markdown content here..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Optional Image Uploads</label>
+                        <div class="file-upload">
+                            <label for="images" class="file-upload-label">
+                                <span class="file-upload-icon">📁</span>
+                                <span class="file-upload-text">Choose images or drag & drop files here</span>
+                            </label>
+                            <input type="file" id="images" name="images" class="file-upload-input" multiple>
+                            <div id="file-preview" class="file-preview"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button type="submit" class="btn btn-accent">Create Module/Submodule</button>
+                </div>
+            </div>
+        </form>
+        
+        <a href="{{ url_for('dashboard') }}" class="back-link">
+            <span class="back-link-icon">←</span> Back to Dashboard
+        </a>
+    </div>
+    
+    <script>
+        // Module option toggle
+        document.querySelectorAll('input[name="module_option"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                document.getElementById('new-module-section').style.display = 
+                    this.value === 'new' ? 'block' : 'none';
+                document.getElementById('existing-module-section').style.display = 
+                    this.value === 'existing' ? 'block' : 'none';
+            });
+        });
+        
+        // File upload preview
+        document.getElementById('images').addEventListener('change', function(e) {
+            const filePreview = document.getElementById('file-preview');
+            filePreview.innerHTML = '';
+            
+            if (this.files.length > 0) {
+                const fileNames = Array.from(this.files)
+                    .map(file => `<div>${file.name} (${(file.size / 1024).toFixed(1)} KB)</div>`)
+                    .join('');
+                filePreview.innerHTML = `<strong>Selected ${this.files.length} file(s):</strong><div>${fileNames}</div>`;
+            }
+        });
+        
+        // Dark mode toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        
+        // Check for saved theme preference
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-mode');
+            themeIcon.textContent = '🌙';
+        }
+        
+        themeToggle.addEventListener('click', function() {
+            document.body.classList.toggle('dark-mode');
+            
+            if (document.body.classList.contains('dark-mode')) {
+                themeIcon.textContent = '🌙';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                themeIcon.textContent = '☀️';
+                localStorage.setItem('theme', 'light');
+            }
+        });
+    </script>
+</body>
+</html>

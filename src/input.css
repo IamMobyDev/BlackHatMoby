@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --pattern-fg: rgba(0, 0, 0, 0.05);
+  --dot-color: rgba(0, 0, 0, 0.05);
+}
+
+.dark {
+  --pattern-fg: rgba(255, 255, 255, 0.1);
+  --dot-color: rgba(255, 255, 255, 0.1);
+}
+
+.diagonal-hatch {
+  background-image: repeating-linear-gradient(
+    315deg,
+    var(--pattern-fg) 0,
+    var(--pattern-fg) 1px,
+    transparent 0,
+    transparent 50%
+  );
+  background-size: 10px 10px;
+  background-attachment: fixed;
+}
+
+.dot-pattern {
+  background-image: radial-gradient(
+    var(--dot-color) 1px,
+    transparent 1px
+  );
+  background-size: 16px 16px;
+  background-position: center;
+}
+
+.border-subtle {
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dark .border-subtle {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.border-x-subtle {
+  border-left: 1px solid rgba(0, 0, 0, 0.05);
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dark .border-x-subtle {
+  border-left-color: rgba(255, 255, 255, 0.1);
+  border-right-color: rgba(255, 255, 255, 0.1);
+}
+
+.divider-line {
+  position: relative;
+}
+
+.divider-line::before,
+.divider-line::after {
+  content: "";
+  position: absolute;
+  height: 1px;
+  width: 200vw;
+  left: -100vw;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.divider-line::before {
+  top: 0;
+}
+
+.divider-line::after {
+  bottom: 0;
+}
+
+.dark .divider-line::before,
+.dark .divider-line::after {
+  background-color: rgba(255, 255, 255, 0.1);
+}

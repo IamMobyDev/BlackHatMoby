@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Complete Payment - BlackMoby{% endblock %}
+
+{% block content %}
+<div class="payment-container">
+    <div class="payment-header">
+        <h1>Complete Your Payment</h1>
+        <p>You are subscribing to the <strong>{{ plan_name }}</strong> plan.</p>
+    </div>
+
+    <div class="payment-summary">
+        <div class="summary-item">
+            <span>Plan:</span>
+            <span>{{ plan_name }}</span>
+        </div>
+        <div class="summary-item">
+            <span>Amount:</span>
+            <span>₦{{ amount_naira }}</span>
+        </div>
+        <div class="summary-item">
+            <span>Reference ID:</span>
+            <span>{{ reference }}</span>
+        </div>
+    </div>
+
+    <div class="payment-form">
+        <div id="payment-button" class="btn btn-success">Pay with Paystack</div>
+        <div class="payment-cancel">
+            <a href="{{ url_for('pricing') }}" class="btn btn-link">Cancel Payment</a>
+        </div>
+    </div>
+
+    <div class="secure-payment">
+        <img src="{{ url_for('static', filename='img/paystack-logo.png') }}" alt="Paystack">
+        <p>This payment is securely processed by Paystack</p>
+    </div>
+</div>
+
+<!-- Hidden field for CSRF protection -->
+<form id="csrf-form" style="display: none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const paymentButton = document.getElementById('payment-button');
+
+    function payWithPaystack() {
+        // Get CSRF token from hidden form
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+        let handler = PaystackPop.setup({
+            key: '{{ paystack_public_key }}',
+            email: '{{ email }}',
+            amount: {{ amount }},
+            currency: 'NGN',
+            ref: '{{ reference }}',
+            metadata: {
+                custom_fields: [
+                    {
+                        display_name: "Plan Type",
+                        variable_name: "plan_type",
+                        value: "{{ plan_type }}"
+                    },
+                    {
+                        display_name: "CSRF Token",
+                        variable_name: "csrf_token",
+                        value: csrfToken
+                    }
+                ]
+            },
+            callback: function(response) {
+                // Create form with CSRF token and reference
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/verify-payment/' + response.reference;
+
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrf_token';
+                csrfInput.value = csrfToken;
+                form.appendChild(csrfInput);
+
+                document.body.appendChild(form);
+                form.submit();
+            },
+            onClose: function() {
+                // Log closure without payment
+                fetch('/payment-abandoned', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        reference: '{{ reference }}'
+                    })
+                }).then(() => {
+                    window.location.href = "/pricing?msg=Payment+window+closed";
+                });
+            }
+        });
+        handler.openIframe();
+    }
+
+    paymentButton.addEventListener('click', payWithPaystack);
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/payment.css') }}">
+{% endblock %}

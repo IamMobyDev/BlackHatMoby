@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="{{ url_for('static', filename='style/style.css') }}" rel="stylesheet" />
+    <link href="{{ url_for('static', filename='style/em.css') }}" rel="stylesheet" />
+    <title>Edit Module - {{ slug }}</title>
+</head>
+<body>
+    <!-- Top navigation bar -->
+    <div class="top-bar">
+        <a href="{{ url_for('dashboard') }}">
+            <img src="{{ url_for('static', filename='gui/mink1.png') }}" alt="Logo" class="logo">
+        </a>
+        <button id="theme-toggle" class="btn btn-link">
+            <span id="theme-icon">☀️</span>
+        </button>
+    </div>
+
+    <div class="container">
+        <h1 class="page-title">
+            Edit Module
+            <span class="page-subtitle">{{ slug }}</span>
+        </h1>
+        
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+        
+        <!-- Editor Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Module Content Editor</h2>
+            </div>
+            <form method="POST" enctype="multipart/form-data">
+                {{ form.csrf_token }}
+                <div class="card-body">
+                    <!-- Optional editor toolbar -->
+                    <div class="editor-toolbar">
+                        <button type="button" data-tag="##">H2</button>
+                        <button type="button" data-tag="###">H3</button>
+                        <button type="button" data-tag="**">Bold</button>
+                        <button type="button" data-tag="_">Italic</button>
+                        <button type="button" data-tag="`">Code</button>
+                        <button type="button" data-tag="- ">List</button>
+                        <button type="button" data-tag="```">Code Block</button>
+                        <button type="button" data-tag="[](url)">Link</button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="content" class="form-label">Markdown Content</label>
+                        {{ form.content(class_="form-control", id="content") }}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Upload Additional Images</label>
+                        <div class="file-upload">
+                            <label for="images" class="file-upload-label">
+                                <span class="file-upload-icon">📁</span>
+                                <span class="file-upload-text">Choose images or drag & drop files here</span>
+                            </label>
+                            <input type="file" id="images" name="images" class="file-upload-input" multiple>
+                            <div id="file-preview" class="file-preview"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    {{ form.submit(class_="btn btn-accent") }}
+                </div>
+            </form>
+        </div>
+        
+        <a href="{{ url_for('dashboard') }}" class="back-link">
+            <span class="back-link-icon">←</span> Back to Dashboard
+        </a>
+    </div>
+    
+    <script>
+        // File upload preview
+        document.getElementById('images').addEventListener('change', function(e) {
+            const filePreview = document.getElementById('file-preview');
+            filePreview.innerHTML = '';
+            
+            if (this.files.length > 0) {
+                const fileNames = Array.from(this.files)
+                    .map(file => `<div>${file.name} (${(file.size / 1024).toFixed(1)} KB)</div>`)
+                    .join('');
+                filePreview.innerHTML = `<strong>Selected ${this.files.length} file(s):</strong><div>${fileNames}</div>`;
+            }
+        });
+        
+        // Markdown toolbar functionality
+        document.querySelectorAll('.editor-toolbar button').forEach(button => {
+            button.addEventListener('click', function() {
+                const textarea = document.getElementById('content');
+                const tag = this.getAttribute('data-tag');
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const selectedText = textarea.value.substring(start, end);
+                
+                let replacement = '';
+                
+                // Handle different tag types
+                if (tag === '##' || tag === '###' || tag === '- ') {
+                    // For headings and lists, add tag at start of line
+                    replacement = tag + ' ' + selectedText;
+                } else if (tag === '```') {
+                    // For code blocks
+                    replacement = tag + '\n' + selectedText + '\n' + tag;
+                } else if (tag === '[](url)') {
+                    // For links
+                    replacement = '[' + selectedText + '](url)';
+                } else {
+                    // For inline formatting (bold, italic, code)
+                    replacement = tag + selectedText + tag;
+                }
+                
+                // Insert the new text
+                textarea.value = 
+                    textarea.value.substring(0, start) +
+                    replacement +
+                    textarea.value.substring(end);
+                
+                // Adjust cursor position
+                const cursorPos = start + replacement.length;
+                textarea.focus();
+                textarea.setSelectionRange(cursorPos, cursorPos);
+            });
+        });
+        
+        // Dark mode toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        
+        // Check for saved theme preference
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-mode');
+            themeIcon.textContent = '🌙';
+        }
+        
+        themeToggle.addEventListener('click', function() {
+            document.body.classList.toggle('dark-mode');
+            
+            if (document.body.classList.contains('dark-mode')) {
+                themeIcon.textContent = '🌙';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                themeIcon.textContent = '☀️';
+                localStorage.setItem('theme', 'light');
+            }
+        });
+    </script>
+</body>
+</html>

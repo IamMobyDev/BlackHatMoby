@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register</title>
+  <link href="{{ url_for('static', filename='style/style.css') }}" rel="stylesheet" />
+  <link href="{{ url_for('static', filename='style/login.css') }}" rel="stylesheet" />
+</head>
+<body>
+  <div class="background"></div>
+  
+  <button id="theme-toggle" class="theme-toggle">
+    <span class="theme-icon">☀️</span>
+  </button>
+  
+  <div class="login-container">
+    <div class="logo-container">
+      <img src="{{ url_for('static', filename='gui/mink1.png') }}" alt="Logo" class="logo">
+    </div>
+    
+    <div class="header">
+      <h2>Create a New Account</h2>
+    </div>
+    
+    {% if error %}
+    <div class="flash-message error">{{ error }}</div>
+    {% endif %}
+    
+    {% if msg %}
+    <div class="flash-message success">{{ msg }}</div>
+    {% endif %}
+    
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      
+      <div class="form-group">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email">
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+        <div class="password-strength" id="password-strength"></div>
+      </div>
+      
+      <div class="form-group">
+        <label for="confirm_password">Confirm Password:</label>
+        <input type="password" id="confirm_password" name="confirm_password" required>
+      </div>
+      
+      <button type="submit" class="submit-button">Register</button>
+    </form>
+    
+    <div class="footer">
+      <p>Already have an account? <a href="/login">Log in here</a></p>
+      <p><a href="/">← Back to Home</a></p>
+    </div>
+  </div>
+  
+  <script>
+    // Password strength checker
+    const passwordInput = document.getElementById('password');
+    const strengthDisplay = document.getElementById('password-strength');
+    passwordInput.addEventListener('input', function () {
+      const value = passwordInput.value;
+      const hasLetter = /[A-Za-z]/.test(value);
+      const hasNumber = /[0-9]/.test(value);
+      const isLongEnough = value.length >= 8;
+      
+      if (!value) {
+        strengthDisplay.textContent = '';
+        strengthDisplay.style.color = 'var(--color-text)';
+        strengthDisplay.classList.remove('weak', 'medium', 'strong');
+      } else if (!isLongEnough) {
+        strengthDisplay.textContent = 'Too short (min 8 characters)';
+        strengthDisplay.style.color = '#c62828';
+        strengthDisplay.classList.add('weak');
+        strengthDisplay.classList.remove('medium', 'strong');
+      } else if (!hasLetter || !hasNumber) {
+        strengthDisplay.textContent = 'Must include letters and numbers';
+        strengthDisplay.style.color = '#f57c00';
+        strengthDisplay.classList.add('medium');
+        strengthDisplay.classList.remove('weak', 'strong');
+      } else {
+        strengthDisplay.textContent = 'Strong password ✅';
+        strengthDisplay.style.color = '#2e7d32';
+        strengthDisplay.classList.add('strong');
+        strengthDisplay.classList.remove('weak', 'medium');
+      }
+    });
+    
+    // Theme toggle functionality
+    const savedTheme = localStorage.getItem('theme');
+    
+    if (savedTheme === 'dark') {
+      document.body.classList.add('dark');
+      document.querySelector('.theme-icon').textContent = '🌙';
+    }
+    
+    document.getElementById('theme-toggle').addEventListener('click', function() {
+      document.body.classList.toggle('dark');
+      const themeIcon = this.querySelector('.theme-icon');
+      
+      if (document.body.classList.contains('dark')) {
+        themeIcon.textContent = '🌙';
+        localStorage.setItem('theme', 'dark');
+      } else {
+        themeIcon.textContent = '☀️';
+        localStorage.setItem('theme', 'light');
+      }
+    });
+  </script>
+</body>
+</html>

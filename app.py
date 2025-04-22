@@ -1,69 +1,34 @@
-from flask import Flask, render_template, request, redirect, url_for, session, abort
+from flask import Flask, render_template, redirect, url_for, request, session, abort, flash, jsonify
+import markdown
 import os
+import re
+import json
+import time
+import requests
+import logging
+import uuid
+from dotenv import load_dotenv
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import timedelta, datetime
+from flask_wtf import FlaskForm
+from flask_wtf.csrf import CSRFProtect, generate_csrf
+from wtforms import StringField, TextAreaField, SubmitField, PasswordField, BooleanField, SelectField, IntegerField
+from wtforms.validators import DataRequired, Regexp, Email, Length, EqualTo, ValidationError
+from models import db, User, Module, Submodule, ModuleCompletion, UserLog, PaymentPlan, Payment, EmailLog
 
-app = Flask(__name__)
-app.secret_key = 'super-secret-key'  # replace with env var or secure method
+# Import utility functions
+from utils.decorators import login_required, admin_required, subscription_required
+from utils.email import send_email
+from utils.payments import verify_paystack_signature, get_readable_amount, generate_verification_token
 
-# Dummy user database
-USERS = {
-    "admin@example.com": {"password": "adminpass", "role": "admin"},
-    "user@example.com": {"password": "userpass", "role": "free"}
-}
+# Or alternatively, import from utils directly if you've set up __init__.py correctly:
+# from utils import login_required, admin_required, subscription_required, send_email
+# from utils import verify_paystack_signature, get_readable_amount, generate_verification_token
+from routes.admin import admin_bp
+from routes.payment import payment_bp
 
-# Dummy module list (would come from DB later)
-MODULES = [
-    {"id": 1, "slug": "intro-to-electronics", "title": "Intro to Electronics", "premium": False},
-    {"id": 2, "slug": "rfid-attacks", "title": "RFID Attacks", "premium": True},
-]
-
-@app.route('/')
-def landing():
-    return render_template('landing.html')
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-        user = USERS.get(email)
-        if user and user['password'] == password:
-            session['user'] = email
-            session['role'] = user['role']
-            return redirect(url_for('dashboard'))
-        return render_template('login.html', error='Invalid credentials')
-    return render_template('login.html')
-
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('landing'))
-
-@app.route('/dashboard')
-def dashboard():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-    return render_template('dashboard.html', modules=MODULES)
-
-@app.route('/modules/<slug>')
-def view_module(slug):
-    if 'user' not in session:
-        return redirect(url_for('login'))
-    module = next((m for m in MODULES if m['slug'] == slug), None)
-    if not module:
-        abort(404)
-    if module['premium'] and session.get('role') != 'admin':
-        return redirect(url_for('subscribe'))
-    return render_template('module_view.html', module=module)
-
-@app.route('/subscribe')
-def subscribe():
-    return render_template('subscribe.html')
-
-@app.route('/admin')
-def admin_dashboard():
-    if session.get('role') != 'admin':
-        abort(403)
-    return render_template('admin_dashboard.html', modules=MODULES)
-
-if __name__ == '__main__':
-    app.run(debug=True)
+# Register blueprints
+app.register_blueprint(admin_bp)
+app.register_blueprint(payment_bp)

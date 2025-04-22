@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Payment Successful - BlackMoby{% endblock %}
+
+{% block content %}
+<div class="success-container">
+    <div class="success-icon">
+        <i class="fas fa-check-circle"></i>
+    </div>
+
+    <h1>Payment Successful!</h1>
+
+    <div class="success-details">
+        <p>Your {{ plan_type }} subscription is now active.</p>
+        <p>Transaction Reference: <strong>{{ reference }}</strong></p>
+        <p>Amount Paid: <strong>₦{{ amount_naira }}</strong></p>
+        {% if subscription_end %}
+        <p>Subscription Valid Until: <strong>{{ subscription_end }}</strong></p>
+        {% else %}
+        <p>Subscription Type: <strong>Lifetime Access</strong></p>
+        {% endif %}
+    </div>
+
+    <div class="success-actions">
+        <a href="{{ url_for('modules') }}" class="btn btn-primary">Start Learning Now</a>
+        <a href="{{ url_for('dashboard') if user.role == 'admin' else url_for('user_modules') }}" class="btn btn-secondary">Go to Dashboard</a>
+    </div>
+
+    <div class="success-note">
+        <p>A confirmation email has been sent to <strong>{{ user.email }}</strong></p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/payment.css') }}">
+{% endblock %}

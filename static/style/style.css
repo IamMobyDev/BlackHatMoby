@@ -1,0 +1,227 @@
+/* ---------------------- */
+/* CSS Variables          */
+/* ---------------------- */
+:root {
+  /* Colors */
+  --color-text: #111;
+  --color-bg: #fff;
+  --color-accent: #222;
+  --color-border: #ddd;
+  --color-border-dashed: #ccc;
+  --color-hover: #f0f0f0;
+  --color-input-bg: #fff;
+  --color-input-border: #222;
+  --color-button-bg: #222;
+  --color-button-text: #fff;
+  --color-button-hover: #444;
+  --color-sidebar-bg: #f9f9f9;
+  --color-code-bg: #f5f5f5;
+
+  /* Transitions */
+  --transition-fast: 0.2s ease;
+  --transition-medium: 0.3s ease;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+
+  /* Fonts */
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Dark mode variables */
+.dark {
+  --color-text: #eee;
+  --color-bg: #111;
+  --color-accent: #fff;
+  --color-border: #444;
+  --color-border-dashed: #444;
+  --color-hover: #222;
+  --color-input-bg: #222;
+  --color-input-border: #555;
+  --color-button-bg: #333;
+  --color-button-text: #fff;
+  --color-button-hover: #555;
+  --color-sidebar-bg: #1a1a1a;
+  --color-code-bg: #222;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+/* ---------------------- */
+/* Base Reset + Layout   */
+/* ---------------------- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  transition: background-color var(--transition-medium), color var(--transition-medium);
+}
+
+a {
+  color: var(--color-text);
+  text-decoration: underline;
+  transition: all var(--transition-fast);
+}
+a:hover {
+  opacity: 0.8;
+  text-decoration: none;
+}
+
+/* ---------------------- */
+/* Typography Utilities   */
+/* ---------------------- */
+.text-sm { font-size: 0.875rem; }
+.text-base { font-size: 1rem; }
+.text-lg { font-size: 1.25rem; }
+.bold { font-weight: bold; }
+.mono { font-family: var(--font-mono); }
+.uppercase { text-transform: uppercase; }
+
+/* ---------------------- */
+/* Spacing Utilities      */
+/* ---------------------- */
+.mt-2 { margin-top: 0.5rem; }
+.mt-4 { margin-top: 1rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.p-2 { padding: 0.5rem; }
+.p-4 { padding: 1rem; }
+
+/* ---------------------- */
+/* Layout Utilities       */
+/* ---------------------- */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.justify-between { justify-content: space-between; }
+.items-center { align-items: center; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+
+/* ---------------------- */
+/* Forms & Buttons        */
+/* ---------------------- */
+input, textarea, select {
+  border: 1px solid var(--color-input-border);
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  padding: 8px;
+  width: 100%;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+button, .btn {
+  background: var(--color-button-bg);
+  color: var(--color-button-text);
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background var(--transition-fast);
+}
+button:hover, .btn:hover {
+  background: var(--color-button-hover);
+}
+
+/* ---------------------- */
+/* Wireframe Vibes        */
+/* ---------------------- */
+hr {
+  border: 1px dashed var(--color-border-dashed);
+  margin: 1.5rem 0;
+  transition: border-color var(--transition-medium);
+}
+
+.divider {
+  border-top: 1px dashed var(--color-border-dashed);
+  margin: 1rem 0;
+  transition: border-color var(--transition-medium);
+}
+
+.dashed-box {
+  border: 1px dashed var(--color-border-dashed);
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background-color: rgba(0, 0, 0, 0.01);
+  transition: border-color var(--transition-medium), background-color var(--transition-medium);
+}
+.dark .dashed-box {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.divider-line {
+  height: 1px;
+  width: 100%;
+  background-color: var(--color-border-dashed);
+  margin: 1rem 0;
+  transition: background-color var(--transition-medium);
+}
+
+.dot-grid-bg {
+  background-image: radial-gradient(var(--color-border-dashed) 1px, transparent 0);
+  background-size: 16px 16px;
+  transition: background-image var(--transition-medium);
+}
+
+/* ---------------------- */
+/* Responsive Breakpoints */
+/* ---------------------- */
+@media (max-width: 768px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .text-lg {
+    font-size: 1.125rem;
+  }
+}
+
+/* ---------------------- */
+/* Image Upload Styling   */
+/* ---------------------- */
+input[type="file"] {
+  border: none;
+}
+
+/* ---------------------- */
+/* Success / Error Msgs   */
+/* ---------------------- */
+.msg-success {
+  color: #2e7d32;
+  font-weight: bold;
+}
+.dark .msg-success {
+  color: #81c784;
+}
+
+.msg-error {
+  color: #c62828;
+  font-weight: bold;
+}
+.dark .msg-error {
+  color: #ef5350;
+}
+
+/* ---------------------- */
+/* Animations            */
+/* ---------------------- */
+.fade-in {
+  opacity: 0;
+  transition: opacity var(--transition-medium);
+}
+
+/* Common accessibility focus styles */
+button:focus, a:focus, input:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
