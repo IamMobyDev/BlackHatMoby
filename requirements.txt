@@ -10,3 +10,6 @@ flask-sqlalchemy
 requests
 flask-mail
 email_validator
+redis
+redis
+redis
