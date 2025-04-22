@@ -14,7 +14,7 @@
     {% if error %}
       <div class="error-msg">{{ error }}</div>
     {% endif %}
-
+    
     <h2>Admin Dashboard</h2>
     <p class="create-module">
       <a href="{{ url_for('admin.create_module') }}" class="btn btn-primary">
@@ -22,7 +22,7 @@
       </a>
     </p>
     <hr>
-
+    
     <h3>Modules & Submodules</h3>
     {% if modules %}
       {% for folder, submodules in modules.items() %}
@@ -38,7 +38,7 @@
                 <span class="module-name">{{ module.filename }}</span>
                 <div class="action-buttons">
                   <a href="{{ url_for('admin.edit_module', module=module.module, slug=module.slug) }}" class="btn btn-edit">Edit</a>
-                  <form method="POST" action="{{ url_for('admin.delete_module', module=module.module, slug=module.slug) }}" style="display:inline;" onsubmit="return confirm('Delete {{ module.slug }}?');">
+                  <form method="POST" action="{{ url_for('delete_module', module=module.module, slug=module.slug) }}" style="display:inline;" onsubmit="return confirm('Delete {{ module.slug }}?');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-delete">Delete</button>
                   </form>
@@ -52,7 +52,7 @@
     {% else %}
       <p class="empty-state">No modules found yet.</p>
     {% endif %}
-
+    
     <div class="dashboard-footer">
       <a href="/logout" class="btn">Logout</a>
     </div>
@@ -62,7 +62,7 @@
     // JavaScript for collapsible modules
     document.addEventListener('DOMContentLoaded', function() {
       const moduleHeaders = document.querySelectorAll('.module-header');
-
+      
       moduleHeaders.forEach(header => {
         header.addEventListener('click', function() {
           this.classList.toggle('active');
@@ -74,7 +74,7 @@
           }
         });
       });
-
+      
       // Open the first module by default (optional)
       if (moduleHeaders.length > 0) {
         moduleHeaders[0].click();
