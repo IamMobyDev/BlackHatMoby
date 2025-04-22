@@ -1,41 +1,7 @@
-from flask import Flask, render_template, redirect, url_for, request, session, abort, flash, jsonify
+from flask import Flask, render_template, redirect, url_for, request, session, abort
 import markdown
 import os
 import re
-import json
-import time
-import hmac
-import hashlib
-import requests
-import logging
-import uuid
-import functools
-from dotenv import load_dotenv
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import timedelta, datetime
-from flask_wtf import FlaskForm
-from flask_wtf.csrf import CSRFProtect, generate_csrf
-from wtforms import StringField, TextAreaField, SubmitField, PasswordField, BooleanField, SelectField, IntegerField
-from wtforms.validators import DataRequired, Regexp, Email, Length, EqualTo, ValidationError
-from models import db, User, Module, Submodule, ModuleCompletion, UserLog, PaymentPlan, Payment, EmailLog
-from flask_mail import Mail, Message
-import threading
-
-def admin_required(view):
-    """Decorator to require admin rights for a route"""
-    @functools.wraps(view)
-    def wrapped_view(*args, **kwargs):
-        if 'user_id' not in session:
-            return redirect(url_for('login', next=request.path))
-            
-        user = User.query.get(session['user_id'])
-        if not user or user.role != 'admin':
-            abort(403)
-            
-        return view(*args, **kwargs)
-    return wrapped_view
 from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -81,7 +47,6 @@ def login():
         user = User.query.filter_by(username=username).first()
 
         if user and check_password_hash(user.password_hash, password):
-            session.clear()
             session.permanent = True
             session["user_id"] = user.id
             session["role"] = user.role
@@ -89,11 +54,7 @@ def login():
             db.session.add(UserLog(user_id=user.id, action="logged in"))
             db.session.commit()
 
-            print(f"User role: {user.role}")  # Debug print
-            if user.role == "admin":
-                return redirect(url_for("dashboard"))
-            else:
-                return redirect(url_for("modules"))
+            return redirect(url_for("dashboard" if user.role == "admin" else "modules"))
 
         return render_template("login.html", error="Invalid credentials")
 
@@ -234,7 +195,7 @@ def create_module():
             if os.path.isdir(folder_path):
                 existing_modules.append(folder)
 
-    if form.validate_on_submit():
+    if request.method == 'POST':  # Changed to check for POST method instead of form validation
         module_option = request.form.get('module_option', 'new')
         
         # Handle module selection based on radio button choice
@@ -257,9 +218,16 @@ def create_module():
                                       error="Please select an existing module.")
             msg_prefix = ""
         
-        slug = form.slug.data.strip().lower()
-        title = form.title.data.strip()
-        content = form.content.data
+        slug = request.form.get('slug', '').strip().lower()  # Get values directly from request.form
+        title = request.form.get('title', '').strip()
+        content = request.form.get('content', '')
+        
+        # Validate required fields
+        if not slug or not title or not content:
+            return render_template('admin_create_module.html', 
+                                  form=form, 
+                                  existing_modules=existing_modules,
+                                  error="All fields are required.")
 
         folder_path = f"modules_data/{module}"
         os.makedirs(folder_path, exist_ok=True)
@@ -283,25 +251,20 @@ def create_module():
         with open(filepath, 'w') as f:
             f.write(f"# {title}\n\n" + content)
 
-        return render_template('admin_create_module.html', 
-                              form=form, 
-                              existing_modules=existing_modules,
-                              msg=f"{msg_prefix}Submodule '{slug}' created under '{module}'!")
+        # Redirect to dashboard instead of rendering template
+        return redirect(url_for('dashboard', msg=f"{msg_prefix}Submodule '{slug}' created under '{module}'!"))
 
     return render_template('admin_create_module.html', 
                          form=form, 
                          existing_modules=existing_modules)
+
 ## Dashboard
 @app.route('/dashboard')
-@admin_required
 def dashboard():
     user_id = session.get("user_id")
-    if not user_id:
-        return redirect(url_for('login'))
-        
     user = User.query.get(user_id)
     if not user or user.role != 'admin':
-        return redirect(url_for('login'))
+        abort(403)
 
     modules = {}
     base_path = "modules_data"
@@ -320,11 +283,9 @@ def dashboard():
                         })
                 modules[folder] = submodules
 
-    print(f"User role: {user.role}")  # Debug print
-    print(f"Modules: {modules}")  # Debug print
     msg = request.args.get("msg")
     error = request.args.get("error")
-    return render_template("admin_dashboard.html", modules=modules, msg=msg, error=error, user=user)
+    return render_template("admin_dashboard.html", modules=modules, msg=msg, error=error)
 
 
 @app.route('/module/<module>/<slug>')
