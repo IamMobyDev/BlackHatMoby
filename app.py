@@ -27,8 +27,8 @@ app = Flask(__name__)
 app.config.from_object(os.environ.get('APP_SETTINGS'))
 load_dotenv()
 limiter = Limiter(
-    app,
     key_func=get_remote_address,
+    app=app,
     default_limits=["200 per day", "10 per hour"]
 )
 csrf = CSRFProtect(app)
@@ -260,3 +260,8 @@ class CreateModuleForm(FlaskForm):
 
 if __name__ == '__main__':
     app.run(debug=True)
+@app.route('/pricing')
+def pricing():
+    """Show available payment plans"""
+    plans = PaymentPlan.query.filter_by(is_active=True).order_by(PaymentPlan.price_usd).all()
+    return render_template('pricing.html', plans=plans)

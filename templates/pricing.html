@@ -5,52 +5,20 @@
 {% block content %}
 <div class="pricing-container">
     <h1>Choose Your Plan</h1>
-
-    {% if error %}
-    <div class="alert alert-danger">{{ error }}</div>
-    {% endif %}
-
-    {% if msg %}
-    <div class="alert alert-success">{{ msg }}</div>
-    {% endif %}
-
-    <div class="pricing-plans">
-        <div class="plan">
-            <h2>Annual Access</h2>
-            <div class="price">₦50,000</div>
-            <ul class="features">
-                <li>Full access to all modules</li>
-                <li>Community support</li>
-                <li>Certificate of completion</li>
-                <li>Access to workshops</li>
-            </ul>
-            <form action="{{ url_for('payment.initiate_payment', plan_slug='yearly') }}" method="GET">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-primary">Subscribe Now</button>
-            </form>
+    <div class="pricing-grid">
+        {% for plan in plans %}
+        <div class="pricing-card">
+            <h2>{{ plan.name }}</h2>
+            <p class="price">${{ "%.2f"|format(plan.price_usd/100) }}</p>
+            <p class="description">{{ plan.description }}</p>
+            {% if plan.duration_days %}
+            <p>Duration: {{ plan.duration_days }} days</p>
+            {% else %}
+            <p>Lifetime access</p>
+            {% endif %}
+            <a href="{{ url_for('initiate_payment', plan_slug=plan.slug) }}" class="subscribe-btn">Subscribe Now</a>
         </div>
-
-        <div class="plan featured">
-            <div class="featured-tag">Best Value</div>
-            <h2>Lifetime Access</h2>
-            <div class="price">₦150,000</div>
-            <ul class="features">
-                <li>Everything in Annual plan</li>
-                <li>Lifetime updates</li>
-                <li>Priority support</li>
-                <li>Special community access</li>
-                <li>Bonus learning materials</li>
-            </ul>
-            <form action="{{ url_for('payment.initiate_payment', plan_slug='lifetime') }}" method="GET">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-success">Get Lifetime Access</button>
-            </form>
-        </div>
-    </div>
-
-    <div class="secure-payment">
-        <img src="{{ url_for('static', filename='img/secure-payment.png') }}" alt="Secure Payment">
-        <p>All payments are secure and processed by Paystack</p>
+        {% endfor %}
     </div>
 </div>
 {% endblock %}
