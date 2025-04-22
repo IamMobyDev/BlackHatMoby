@@ -24,7 +24,7 @@
                 <li>Certificate of completion</li>
                 <li>Access to workshops</li>
             </ul>
-            <form action="{{ url_for('initiate_payment', plan_type='annual') }}" method="GET">
+            <form action="{{ url_for('payment.initiate_payment', plan_type='annual') }}" method="GET">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-primary">Subscribe Now</button>
             </form>
