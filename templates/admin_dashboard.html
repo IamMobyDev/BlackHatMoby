@@ -1,137 +1,85 @@
-
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Admin Dashboard</title>
   <link href="{{ url_for('static', filename='style/style.css') }}" rel="stylesheet"/>
   <link href="{{ url_for('static', filename='style/ad.css') }}" rel="stylesheet"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
 </head>
 <body>
   <div class="dashboard-container">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="flash-message {{ category }}">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <h1>Admin Dashboard</h1>
-
-    <div class="stats-grid">
-      <div class="stat-card">
-        <h3>Total Users</h3>
-        <p>{{ User.query.count() }}</p>
-      </div>
-      <div class="stat-card">
-        <h3>Paid Users</h3>
-        <p>{{ User.query.filter_by(paid=True).count() }}</p>
-      </div>
-      <div class="stat-card">
-        <h3>Total Modules</h3>
-        <p>{{ Module.query.count() }}</p>
-      </div>
-      <div class="stat-card">
-        <h3>Active Users</h3>
-        <p>{{ User.query.filter_by(is_verified=True).count() }}</p>
-      </div>
-    </div>
-
-    <section class="dashboard-section">
-      <h2>User Management</h2>
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Username</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Status</th>
-              <th>Paid</th>
-              <th>Created</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-          {% for user in User.query.order_by(User.created_at.desc()).all() %}
-            <tr>
-              <td>{{ user.username }}</td>
-              <td>{{ user.email }}</td>
-              <td>{{ user.role }}</td>
-              <td>{{ "Active" if user.is_verified else "Pending" }}</td>
-              <td>{{ "Yes" if user.paid else "No" }}</td>
-              <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
-              <td class="actions">
-                <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-edit">Edit</a>
-                {% if user.role != 'admin' %}
-                <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" class="inline-form">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" class="btn btn-delete" onclick="return confirm('Are you sure you want to delete this user?')">Delete</button>
-                </form>
-                {% endif %}
-              </td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="dashboard-section">
-      <h2>Module Management</h2>
-      <div class="actions">
-        <a href="{{ url_for('admin.create_module') }}" class="btn btn-primary">Create New Module</a>
-      </div>
-
-      <div class="modules-container">
-        {% for module in Module.query.order_by(Module.order).all() %}
-          <div class="module-card">
-            <div class="module-header">
-              <h3>{{ module.title }}</h3>
-              <div class="module-actions">
-                <a href="{{ url_for('admin.edit_module', module_id=module.id) }}" class="btn btn-edit">Edit</a>
-                <a href="{{ url_for('admin.create_module_submodule', module_id=module.id) }}" class="btn btn-primary">Add Submodule</a>
-              </div>
-            </div>
-            
-            <div class="module-details">
-              <p><strong>Slug:</strong> {{ module.slug }}</p>
-              <p><strong>Order:</strong> {{ module.order }}</p>
-              <p><strong>Created:</strong> {{ module.created_at.strftime('%Y-%m-%d') }}</p>
-            </div>
-
-            <div class="submodules-list">
-              <h4>Submodules</h4>
-              {% for submodule in Submodule.query.filter_by(module_id=module.id).order_by(Submodule.order).all() %}
-                <div class="submodule-item">
-                  <div class="submodule-info">
-                    <span class="submodule-title">{{ submodule.title }}</span>
-                    <span class="submodule-order">(Order: {{ submodule.order }})</span>
-                  </div>
-                  <div class="submodule-actions">
-                    <a href="{{ url_for('admin.edit_submodule', submodule_id=submodule.id) }}" class="btn btn-edit">Edit</a>
-                    <form method="POST" action="{{ url_for('admin.delete_submodule', submodule_id=submodule.id) }}" class="inline-form">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                      <button type="submit" class="btn btn-delete" onclick="return confirm('Are you sure you want to delete this submodule?')">Delete</button>
-                    </form>
-                  </div>
-                </div>
-              {% else %}
-                <p class="no-data">No submodules yet</p>
-              {% endfor %}
-            </div>
+    {% if msg %}
+      <div class="success-msg">{{ msg }}</div>
+    {% endif %}
+    {% if error %}
+      <div class="error-msg">{{ error }}</div>
+    {% endif %}
+    
+    <h2>Admin Dashboard</h2>
+    <p class="create-module">
+      <a href="{{ url_for('create_module') }}" class="btn btn-primary">
+        <strong>➕ Create New Submodule</strong>
+      </a>
+    </p>
+    <hr>
+    
+    <h3>Modules & Submodules</h3>
+    {% if modules %}
+      {% for folder, submodules in modules.items() %}
+        <div class="module-section">
+          <div class="module-header">
+            {{ folder.replace('-', ' ').title() }}
+            <span class="icon">▼</span>
           </div>
-        {% else %}
-          <p class="no-data">No modules created yet</p>
-        {% endfor %}
-      </div>
-    </section>
-
+          <div class="module-content">
+            <ul>
+              {% for module in submodules %}
+              <li>
+                <span class="module-name">{{ module.filename }}</span>
+                <div class="action-buttons">
+                  <a href="{{ url_for('edit_module', module=module.module, slug=module.slug) }}" class="btn btn-edit">Edit</a>
+                  <form method="POST" action="{{ url_for('delete_module', module=module.module, slug=module.slug) }}" style="display:inline;" onsubmit="return confirm('Delete {{ module.slug }}?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-delete">Delete</button>
+                  </form>
+                </div>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="empty-state">No modules found yet.</p>
+    {% endif %}
+    
     <div class="dashboard-footer">
-      <a href="{{ url_for('main.index') }}" class="btn">Back to Home</a>
-      <a href="{{ url_for('auth.logout') }}" class="btn btn-logout">Logout</a>
+      <a href="/logout" class="btn">Logout</a>
     </div>
   </div>
+
+  <script>
+    // JavaScript for collapsible modules
+    document.addEventListener('DOMContentLoaded', function() {
+      const moduleHeaders = document.querySelectorAll('.module-header');
+      
+      moduleHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+          this.classList.toggle('active');
+          const content = this.nextElementSibling;
+          if (content.classList.contains('show')) {
+            content.classList.remove('show');
+          } else {
+            content.classList.add('show');
+          }
+        });
+      });
+      
+      // Open the first module by default (optional)
+      if (moduleHeaders.length > 0) {
+        moduleHeaders[0].click();
+      }
+    });
+  </script>
 </body>
 </html>
