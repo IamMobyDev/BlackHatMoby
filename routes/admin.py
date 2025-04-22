@@ -28,10 +28,12 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 @admin_required
 def dashboard():
     """Admin dashboard"""
+    modules = Module.query.order_by(Module.title).all() #Sort modules alphanumerically by title
     return render_template(
         "admin_dashboard.html",
         User=User,
-        Module=Module
+        Module=Module,
+        modules=modules #Pass sorted modules to template
     )
 
 @admin_bp.route("/modules")
