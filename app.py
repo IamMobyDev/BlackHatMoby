@@ -62,6 +62,7 @@ def login():
         user = User.query.filter_by(username=username).first()
 
         if user and check_password_hash(user.password_hash, password):
+            session.clear()
             session.permanent = True
             session["user_id"] = user.id
             session["role"] = user.role
@@ -69,7 +70,9 @@ def login():
             db.session.add(UserLog(user_id=user.id, action="logged in"))
             db.session.commit()
 
-            return redirect(url_for("dashboard" if user.role == "admin" else "modules"))
+            if user.role == "admin":
+                return redirect(url_for("dashboard"))
+            return redirect(url_for("modules"))
 
         return render_template("login.html", error="Invalid credentials")
 
