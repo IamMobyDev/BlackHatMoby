@@ -24,7 +24,7 @@
                 <li>Certificate of completion</li>
                 <li>Access to workshops</li>
             </ul>
-            <form action="{{ url_for('payment.initiate_payment', plan_type='annual') }}" method="GET">
+            <form action="{{ url_for('payment.initiate_payment', plan_slug='yearly') }}" method="GET">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-primary">Subscribe Now</button>
             </form>
@@ -41,7 +41,7 @@
                 <li>Special community access</li>
                 <li>Bonus learning materials</li>
             </ul>
-            <form action="{{ url_for('initiate_payment', plan_type='lifetime') }}" method="GET">
+            <form action="{{ url_for('payment.initiate_payment', plan_slug='lifetime') }}" method="GET">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-success">Get Lifetime Access</button>
             </form>
