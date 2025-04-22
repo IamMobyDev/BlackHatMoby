@@ -28,30 +28,66 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 @admin_required
 def dashboard():
     """Admin dashboard"""
-    # Get basic statistics
-    total_users = User.query.count()
-    active_users = User.query.filter(User.subscription_status == "active").count()
-    trial_users = User.query.filter(User.subscription_status == "trial").count()
-
-    # Get recent registrations
-    recent_users = User.query.order_by(User.created_at.desc()).limit(10).all()
-
-    # Get recent payments
-    recent_payments = (
-        Payment.query.filter_by(status="completed")
-        .order_by(Payment.updated_at.desc())
-        .limit(10)
-        .all()
-    )
-
     return render_template(
-        "admin/dashboard.html",
-        total_users=total_users,
-        active_users=active_users,
-        trial_users=trial_users,
-        recent_users=recent_users,
-        recent_payments=recent_payments,
+        "admin_dashboard.html",
+        User=User,
+        Module=Module
     )
+
+@admin_bp.route("/modules/create", methods=["GET", "POST"])
+@admin_required
+def create_module():
+    if request.method == "POST":
+        module = Module(
+            title=request.form.get("title"),
+            slug=request.form.get("slug"),
+            description=request.form.get("description"),
+            order=int(request.form.get("order", 0))
+        )
+        db.session.add(module)
+        db.session.commit()
+        flash("Module created successfully!", "success")
+        return redirect(url_for("admin.dashboard"))
+    return render_template("admin_create_module.html")
+
+@admin_bp.route("/modules/<int:module_id>/edit", methods=["GET", "POST"])
+@admin_required
+def edit_module(module_id):
+    module = Module.query.get_or_404(module_id)
+    if request.method == "POST":
+        module.title = request.form.get("title")
+        module.description = request.form.get("description")
+        module.order = int(request.form.get("order", 0))
+        db.session.commit()
+        flash("Module updated successfully!", "success")
+        return redirect(url_for("admin.dashboard"))
+    return render_template("edit_module.html", module=module)
+
+@admin_bp.route("/modules/<int:module_id>/submodules/create", methods=["GET", "POST"])
+@admin_required
+def create_submodule(module_id):
+    module = Module.query.get_or_404(module_id)
+    if request.method == "POST":
+        submodule = Submodule(
+            module_id=module.id,
+            title=request.form.get("title"),
+            slug=request.form.get("slug"),
+            order=int(request.form.get("order", 0))
+        )
+        db.session.add(submodule)
+        db.session.commit()
+        flash("Submodule created successfully!", "success")
+        return redirect(url_for("admin.dashboard"))
+    return render_template("admin_create_module.html", module=module, is_submodule=True)
+
+@admin_bp.route("/submodules/<int:submodule_id>/delete", methods=["POST"])
+@admin_required
+def delete_submodule(submodule_id):
+    submodule = Submodule.query.get_or_404(submodule_id)
+    db.session.delete(submodule)
+    db.session.commit()
+    flash("Submodule deleted successfully!", "success")
+    return redirect(url_for("admin.dashboard"))
 
 
 @admin_bp.route("/modules")

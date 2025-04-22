@@ -24,7 +24,7 @@
       </div>
       <div class="stat-card">
         <h3>Total Modules</h3>
-        <p>{{ modules|length }}</p>
+        <p>{{ Module.query.count() }}</p>
       </div>
       <div class="stat-card">
         <h3>Active Users</h3>
@@ -52,7 +52,7 @@
             <td>{{ user.role }}</td>
             <td>{{ "Active" if user.is_verified else "Pending" }}</td>
             <td>
-              <a href="#" class="btn btn-edit">Edit</a>
+              <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-edit">Edit</a>
             </td>
           </tr>
         {% endfor %}
@@ -62,64 +62,40 @@
 
     <h2>Module Management</h2>
     <div class="actions">
-      <a href="{{ url_for('create_module') }}" class="btn btn-primary">Create New Module</a>
+      <a href="{{ url_for('admin.create_module') }}" class="btn btn-primary">Create New Module</a>
     </div>
 
-    {% if modules %}
-      {% for folder, submodules in modules.items() %}
+    <div class="module-list">
+      {% for module in Module.query.order_by(Module.order).all() %}
         <div class="module-section">
           <div class="module-header">
-            <span>{{ folder.replace('-', ' ').title() }}</span>
-            <span class="icon">▼</span>
+            <span>{{ module.title }}</span>
+            <div class="actions">
+              <a href="{{ url_for('admin.edit_module', module_id=module.id) }}" class="btn btn-edit">Edit</a>
+              <a href="{{ url_for('admin.create_submodule', module_id=module.id) }}" class="btn btn-primary">Add Submodule</a>
+            </div>
           </div>
           <div class="module-content">
-            <ul>
-              {% for module in submodules %}
-              <li>
-                <div class="module-item">
-                  <span class="module-name">{{ module.filename }}</span>
-                  <div class="action-buttons">
-                    <a href="{{ url_for('edit_module', module=module.module, slug=module.slug) }}" class="btn btn-edit">Edit</a>
-                    <form method="POST" action="{{ url_for('delete_module', module=module.module, slug=module.slug) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete {{ module.slug }}?');">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                      <button type="submit" class="btn btn-delete">Delete</button>
-                    </form>
-                  </div>
+            {% for submodule in module.submodules %}
+              <div class="submodule-item">
+                <span>{{ submodule.title }}</span>
+                <div class="actions">
+                  <a href="{{ url_for('admin.edit_submodule', submodule_id=submodule.id) }}" class="btn btn-edit">Edit</a>
+                  <form method="POST" action="{{ url_for('admin.delete_submodule', submodule_id=submodule.id) }}" style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-delete" onclick="return confirm('Are you sure?')">Delete</button>
+                  </form>
                 </div>
-              </li>
-              {% endfor %}
-            </ul>
+              </div>
+            {% endfor %}
           </div>
         </div>
       {% endfor %}
-    {% else %}
-      <p class="empty-state">No modules found. Create your first module to get started!</p>
-    {% endif %}
+    </div>
 
     <div class="dashboard-footer">
-      <a href="/logout" class="btn">Logout</a>
+      <a href="{{ url_for('auth.logout') }}" class="btn">Logout</a>
     </div>
   </div>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const moduleHeaders = document.querySelectorAll('.module-header');
-
-      moduleHeaders.forEach(header => {
-        header.addEventListener('click', function() {
-          this.classList.toggle('active');
-          const content = this.nextElementSibling;
-          content.classList.toggle('show');
-          const icon = this.querySelector('.icon');
-          icon.textContent = content.classList.contains('show') ? '▼' : '▶';
-        });
-      });
-
-      // Open first module by default
-      if (moduleHeaders.length > 0) {
-        moduleHeaders[0].click();
-      }
-    });
-  </script>
 </body>
 </html>
