@@ -128,7 +128,7 @@ def edit_module(module, slug):
     if request.method == "POST":
         # Handle module update logic
         return redirect(url_for("admin.dashboard"))
-        
+
     return render_template("edit_module.html", module=module, slug=slug)
 
 
