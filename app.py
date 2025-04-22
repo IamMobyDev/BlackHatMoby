@@ -41,6 +41,55 @@ csrf = CSRFProtect(app)
 mail = Mail(app)
 db.init_app(app)
 
+# Initialize database and create default plans
+def init_db():
+    with app.app_context():
+        db.create_all()
+        
+        # Check if we need to create default plans
+        if PaymentPlan.query.count() == 0:
+            # Create default plans
+            trial_plan = PaymentPlan(
+                name="Free Trial",
+                slug="trial",
+                description="7-day free trial with access to limited content",
+                price_usd=0,
+                duration_days=7,
+                is_active=True
+            )
+            
+            monthly_plan = PaymentPlan(
+                name="Monthly Access",
+                slug="monthly", 
+                description="Full access to all content for 30 days",
+                price_usd=1999,  # $19.99
+                duration_days=30,
+                is_active=True
+            )
+            
+            annual_plan = PaymentPlan(
+                name="Annual Access",
+                slug="annual",
+                description="Full access to all content for 12 months", 
+                price_usd=9999,  # $99.99
+                duration_days=365,
+                is_active=True
+            )
+            
+            lifetime_plan = PaymentPlan(
+                name="Lifetime Access",
+                slug="lifetime",
+                description="Unlimited access to all current and future content",
+                price_usd=19999,  # $199.99
+                duration_days=None,
+                is_active=True
+            )
+            
+            db.session.add_all([trial_plan, monthly_plan, annual_plan, lifetime_plan])
+            db.session.commit()
+
+init_db()
+
 # Authentication decorator
 def auth_required(f):
     @functools.wraps(f)
@@ -84,13 +133,8 @@ payment_logger.addHandler(handler)
 # Placeholder for Paystack secret key - get from environment variables
 PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY')
 
-# Placeholder for Subscription model - replace with actual model
-class Subscription(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    plan_type = db.Column(db.String(120))
-    start_date = db.Column(db.DateTime)
-    end_date = db.Column(db.DateTime)
+# Import Subscription model from models
+from models import Subscription
 
 
 def get_csrf_token():
