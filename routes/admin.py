@@ -121,24 +121,15 @@ def delete_submodule(submodule_id):
 
 
 
-@admin_bp.route("/modules/<int:module_id>/edit", methods=["GET", "POST"])
+@admin_bp.route("/modules/<module>/<slug>/edit", methods=["GET", "POST"])
 @admin_required
-def edit_module(module_id):
+def edit_module(module, slug):
     """Edit a module"""
-    module = Module.query.get_or_404(module_id)
-
     if request.method == "POST":
-        # Update module fields
-        module.title = request.form.get("title")
-        module.description = request.form.get("description")
-        module.order = int(request.form.get("order", 0))
-        module.trial_accessible = request.form.get("trial_accessible") == "on"
-
-        db.session.commit()
-        flash(f'Module "{module.title}" updated successfully', "success")
-        return redirect(url_for("admin.modules"))
-
-    return render_template("admin/edit_module.html", module=module)
+        # Handle module update logic
+        return redirect(url_for("admin.dashboard"))
+        
+    return render_template("edit_module.html", module=module, slug=slug)
 
 
 @admin_bp.route("/submodules")
