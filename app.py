@@ -2,71 +2,69 @@
 from flask import Flask, render_template, redirect, url_for, request, session, abort
 import markdown
 import os
-import re
-import json
-import time
-import requests
-import logging
 from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import timedelta, datetime
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect
+from wtforms import StringField, TextAreaField, SubmitField
+from wtforms.validators import DataRequired, Regexp
 from models import db, User, ModuleCompletion, UserLog
+import logging
 
-# Import utility functions
-from utils.decorators import login_required, admin_required, subscription_required
-from utils.email import send_email
-from extensions import limiter, csrf, mail, db
-
+# Load environment variables
 load_dotenv()
+
+# Initialize Flask app
 app = Flask(__name__)
 
-# Database setup
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blackmoby.db'
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Database configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Secrets and CSRF
-app.secret_key = os.getenv('SECRET_KEY')
-app.config['WTF_CSRF_SECRET_KEY'] = os.getenv('WTF_CSRF_SECRET_KEY')
-app.permanent_session_lifetime = timedelta(minutes=30)
+# Security configuration
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-please-change')
+app.config['WTF_CSRF_SECRET_KEY'] = os.getenv('WTF_CSRF_SECRET_KEY', 'csrf-key-please-change')
 
 # Initialize extensions
 db.init_app(app)
-csrf.init_app(app)
-limiter.init_app(app)
-mail.init_app(app)
+csrf = CSRFProtect(app)
+limiter = Limiter(app=app, key_func=get_remote_address)
 
-# Import routes after app is created to avoid circular imports
-from routes.admin import admin_bp
-from routes.payment import payment_bp
+# Create tables
+with app.app_context():
+    db.create_all()
+    
+    # Create admin user if it doesn't exist
+    if not User.query.filter_by(username='admin').first():
+        admin = User(
+            username='admin',
+            email='admin@example.com',
+            role='admin',
+            paid=True
+        )
+        admin.set_password('adminpass123')
+        db.session.add(admin)
+        db.session.commit()
+        logger.info("✅ Admin user created: admin / adminpass123")
+
+# Import routes after db initialization
 from routes.auth import auth_bp
+from routes.admin import admin_bp
 from routes.modules import modules_bp
-from routes.main import main_bp
 
 # Register blueprints
-app.register_blueprint(admin_bp)
-app.register_blueprint(payment_bp)
 app.register_blueprint(auth_bp)
+app.register_blueprint(admin_bp)
 app.register_blueprint(modules_bp)
-app.register_blueprint(main_bp)
+
+@app.route('/')
+def index():
+    return render_template('landing.html')
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-
-        if not User.query.filter_by(username='admin').first():
-            admin_user = User(
-                username='admin',
-                email='admin@example.com',
-                password_hash=generate_password_hash('adminpass123'),
-                role='admin',
-                paid=True
-            )
-            db.session.add(admin_user)
-            db.session.commit()
-            print("✅ Admin user created: admin / adminpass123")
-
-    app.run(debug=True, host='0.0.0.0', port=3000)
+    app.run(host='0.0.0.0', port=3000, debug=True)

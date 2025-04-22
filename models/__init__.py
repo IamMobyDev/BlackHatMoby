@@ -6,22 +6,15 @@ db = SQLAlchemy()
 
 class User(db.Model):
     __tablename__ = 'users'
-
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(25), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
-    role = db.Column(db.String(20), default='user', nullable=False)  # 'user' or 'admin'
+    role = db.Column(db.String(20), default='user', nullable=False)
     is_verified = db.Column(db.Boolean, default=False)
     paid = db.Column(db.Boolean, default=False)
-
-    # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # Relationships
-    module_completions = db.relationship('ModuleCompletion', backref='user', lazy=True)
-    logs = db.relationship('UserLog', backref='user', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -31,52 +24,35 @@ class User(db.Model):
 
 class Module(db.Model):
     __tablename__ = 'modules'
-
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     slug = db.Column(db.String(100), unique=True, nullable=False)
     description = db.Column(db.Text, nullable=True)
     order = db.Column(db.Integer, default=0)
-    trial_accessible = db.Column(db.Boolean, default=False)
-
-    # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationships
-    submodules = db.relationship('Submodule', backref='module', lazy=True, order_by='Submodule.order')
-
 class Submodule(db.Model):
     __tablename__ = 'submodules'
-
     id = db.Column(db.Integer, primary_key=True)
     module_id = db.Column(db.Integer, db.ForeignKey('modules.id'), nullable=False)
     title = db.Column(db.String(100), nullable=False)
     slug = db.Column(db.String(100), nullable=False)
     order = db.Column(db.Integer, default=0)
-
-    # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # Relationships
-    completions = db.relationship('ModuleCompletion', backref='submodule', lazy=True)
-
     __table_args__ = (db.UniqueConstraint('module_id', 'slug', name='_module_slug_uc'),)
 
 class ModuleCompletion(db.Model):
     __tablename__ = 'module_completions'
-
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    submodule_id = db.Column(db.Integer, db.ForeignKey('submodules.id'), nullable=False)
+    module_slug = db.Column(db.String(100), nullable=False)
     completed_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    __table_args__ = (db.UniqueConstraint('user_id', 'submodule_id', name='unique_user_submodule'),)
+    __table_args__ = (db.UniqueConstraint('user_id', 'module_slug', name='unique_user_module'),)
 
 class UserLog(db.Model):
     __tablename__ = 'user_logs'
-
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     action = db.Column(db.String(200), nullable=False)
@@ -84,7 +60,6 @@ class UserLog(db.Model):
 
 class PaymentPlan(db.Model):
     __tablename__ = 'payment_plans'
-
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     slug = db.Column(db.String(100), unique=True, nullable=False)
@@ -94,14 +69,11 @@ class PaymentPlan(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # Relationships
     payments = db.relationship('Payment', backref='plan', lazy=True)
 
 
 class Payment(db.Model):
     __tablename__ = 'payments'
-
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     plan_id = db.Column(db.Integer, db.ForeignKey('payment_plans.id'), nullable=False)
@@ -118,7 +90,6 @@ class Payment(db.Model):
 
 class EmailLog(db.Model):
     __tablename__ = 'email_logs'
-
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     email_type = db.Column(db.String(50), nullable=False)
