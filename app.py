@@ -58,7 +58,8 @@ if __name__ == '__main__':
                 paid=True,
                 is_verified=True,
                 subscription_type='lifetime',
-                subscription_status='active'
+                subscription_status='active',
+                subscription_start=datetime.utcnow()
             )
             db.session.add(admin_user)
             db.session.commit()
