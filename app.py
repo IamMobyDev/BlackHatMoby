@@ -56,8 +56,141 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+#Adding login_required decorator (assumed)
+def login_required(f):
+    @functools.wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
-# ... (rest of the app.py file would go here) ...
+# Placeholder for logger - replace with proper logging setup
+payment_logger = logging.getLogger(__name__)
+payment_logger.setLevel(logging.ERROR) #Set appropriate level
+handler = logging.FileHandler('payment.log') #Set appropriate handler
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+payment_logger.addHandler(handler)
+
+
+
+# Placeholder for Paystack secret key - get from environment variables
+PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY')
+
+# Placeholder for Subscription model - replace with actual model
+class Subscription(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    plan_type = db.Column(db.String(120))
+    start_date = db.Column(db.DateTime)
+    end_date = db.Column(db.DateTime)
+
+
+def get_csrf_token():
+    if 'user_id' not in session:
+        return jsonify(error="Not authenticated"), 401
+
+    return jsonify(csrf_token=generate_csrf())
+
+@app.route('/initiate-payment/<plan_slug>')
+@login_required
+@limiter.limit("5 per minute")
+def initiate_payment(plan_slug):
+    """Initialize payment for a subscription plan"""
+    plan = PaymentPlan.query.filter_by(slug=plan_slug, is_active=True).first_or_404()
+    user = User.query.get(session['user_id'])
+
+    # Generate unique reference
+    reference = f"sub_{user.id}_{int(time.time())}"
+
+    # Create payment record
+    payment = Payment(
+        user_id=user.id,
+        amount=plan.price_usd,
+        plan_type=plan.slug,
+        transaction_id=reference,
+        status='pending'
+    )
+    db.session.add(payment)
+    db.session.commit()
+
+    try:
+        # Initialize transaction with Paystack
+        headers = {
+            'Authorization': f'Bearer {PAYSTACK_SECRET_KEY}',
+            'Content-Type': 'application/json'
+        }
+        data = {
+            'email': user.email,
+            'amount': plan.price_usd * 100,  # Amount in kobo/cents
+            'reference': reference,
+            'callback_url': url_for('verify_payment', reference=reference, _external=True)
+        }
+
+        response = requests.post('https://api.paystack.co/transaction/initialize',
+                               headers=headers,
+                               json=data)
+
+        if response.status_code == 200:
+            result = response.json()
+            return redirect(result['data']['authorization_url'])
+
+        payment_logger.error(f"Paystack initialization failed: {response.text}")
+        flash("Payment initialization failed. Please try again.", "error")
+
+    except Exception as e:
+        payment_logger.error(f"Payment initialization error: {str(e)}")
+        flash("An error occurred. Please try again.", "error")
+
+    return redirect(url_for('pricing'))
+
+@app.route('/verify-payment/<reference>')
+@login_required
+def verify_payment(reference):
+    """Verify payment status"""
+    payment = Payment.query.filter_by(transaction_id=reference).first_or_404()
+
+    try:
+        # Verify transaction with Paystack
+        headers = {'Authorization': f'Bearer {PAYSTACK_SECRET_KEY}'}
+        response = requests.get(f'https://api.paystack.co/transaction/verify/{reference}',
+                              headers=headers)
+
+        if response.status_code == 200:
+            result = response.json()
+
+            if result['data']['status'] == 'success':
+                # Update payment status
+                payment.status = 'completed'
+                db.session.commit()
+
+                # Update user subscription
+                plan = PaymentPlan.query.filter_by(slug=payment.plan_type).first()
+                user = User.query.get(payment.user_id)
+
+                if plan and user:
+                    subscription = Subscription(
+                        user_id=user.id,
+                        plan_type=plan.slug,
+                        start_date=datetime.utcnow(),
+                        end_date=(datetime.utcnow() + timedelta(days=plan.duration_days)) if plan.duration_days else None
+                    )
+                    db.session.add(subscription)
+                    db.session.commit()
+
+                    flash("Payment successful! Your subscription is now active.", "success")
+                    return redirect(url_for('user_modules'))
+
+        payment_logger.error(f"Payment verification failed: {response.text}")
+        flash("Payment verification failed. Please contact support.", "error")
+
+    except Exception as e:
+        payment_logger.error(f"Payment verification error: {str(e)}")
+        flash("An error occurred during verification. Please contact support.", "error")
+
+    return redirect(url_for('pricing'))
+
 
 @app.route('/admin/modules')
 @admin_required
