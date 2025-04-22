@@ -1,4 +1,5 @@
 from flask import Flask, render_template, redirect, url_for, request, session, abort
+import functools
 import markdown
 import os
 import re
@@ -254,6 +255,7 @@ def create_module():
                          existing_modules=existing_modules)
 ## Dashboard
 @app.route('/dashboard')
+@admin_required
 def dashboard():
     user_id = session.get("user_id")
     user = User.query.get(user_id)
