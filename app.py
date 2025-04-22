@@ -39,25 +39,22 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 csrf = CSRFProtect(app)
 mail = Mail(app)
+limiter = Limiter(app=app, key_func=get_remote_address)
 
-# Configure Flask app before creating tables
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
-
-# Initialize limiter
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"]
-)
-
-# Ensure instance directory exists
+# Create required directories
 os.makedirs('instance', exist_ok=True)
+os.makedirs('static/uploads', exist_ok=True)
+os.makedirs('content/modules', exist_ok=True)
 
-# Create database tables
-with app.app_context():
-    db.create_all()
+# Ensure proper permissions
+os.chmod('instance', 0o777)
+
+def init_db():
+    with app.app_context():
+        db.create_all()
+        
+# Initialize database
+init_db()
 
 @app.route('/')
 def index():
