@@ -13,6 +13,14 @@ load_dotenv()
 # Initialize Flask app
 app = Flask(__name__)
 
+# Configure logging
+logging.basicConfig(
+    filename='app.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('blackmoby')
+
 # Configure Flask app
 app.config.update(
     SQLALCHEMY_DATABASE_URI=os.getenv('DATABASE_URI', 'sqlite:///blackmoby.db'),

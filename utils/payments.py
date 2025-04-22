@@ -4,7 +4,7 @@ import hashlib
 import uuid
 import logging
 
-# Configure logging
+# Setup payment logger
 payment_logger = logging.getLogger("payment")
 
 # Get Paystack secret key from environment
@@ -24,13 +24,11 @@ def get_readable_amount(amount_cents):
 def verify_paystack_signature(payload, signature):
     """Verify Paystack webhook signature"""
     if not PAYSTACK_SECRET_KEY:
-        payment_logger.error(
-            "Cannot verify Paystack signature: Secret key not configured"
-        )
+        payment_logger.error("Cannot verify Paystack signature: Secret key not configured")
         return False
 
     try:
-        secret = PAYSTACK_SECRET_KEY.encode("utf-8")
+        secret = PAYSTACK_SECRET_KEY.encode('utf-8')
         generated = hmac.new(secret, msg=payload, digestmod=hashlib.sha512).hexdigest()
         return hmac.compare_digest(generated, signature)
     except Exception as e:
