@@ -24,8 +24,14 @@ from flask_mail import Mail, Message
 import threading
 
 app = Flask(__name__)
-app.config.from_object(os.environ.get('APP_SETTINGS'))
 load_dotenv()
+app.config.update(
+    SQLALCHEMY_DATABASE_URI='sqlite:///instance/app.db',
+    SQLALCHEMY_TRACK_MODIFICATIONS=False,
+    SECRET_KEY=os.getenv('SECRET_KEY', 'dev_secret_key'),
+    WTF_CSRF_SECRET_KEY=os.getenv('WTF_CSRF_SECRET_KEY', 'dev_csrf_key'),
+    PERMANENT_SESSION_LIFETIME=timedelta(minutes=30)
+)
 limiter = Limiter(
     key_func=get_remote_address,
     app=app,
