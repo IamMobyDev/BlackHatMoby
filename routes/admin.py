@@ -91,7 +91,7 @@ def edit_module_basic(module_id):
         db.session.commit()
         flash("Module updated successfully!", "success")
         return redirect(url_for("admin.dashboard"))
-    return render_template("edit_module.html", module=module)
+    return render_template("admin.edit_module.html", module=module)
 
 @admin_bp.route("/modules/<int:module_id>/submodules/create", methods=["GET", "POST"])
 @admin_required
