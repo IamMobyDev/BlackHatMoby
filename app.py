@@ -20,6 +20,7 @@ from models import db, User, Module, Submodule, ModuleCompletion, UserLog, Payme
 
 # Import utility functions
 from utils.decorators import login_required, admin_required, subscription_required
+from extensions import limiter, csrf
 from utils.email import send_email
 from utils.payments import verify_paystack_signature, get_readable_amount, generate_verification_token
 

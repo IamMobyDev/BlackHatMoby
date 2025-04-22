@@ -9,7 +9,7 @@ from forms.auth import LoginForm, RegistrationForm
 from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime
 from utils.email import send_email
-from utils.decorators import limiter
+from extensions import limiter
 import uuid
 import logging
 
