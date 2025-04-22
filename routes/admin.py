@@ -28,16 +28,26 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 @admin_required
 def dashboard():
     """Admin dashboard"""
+    # Get basic statistics
+    total_users = User.query.count()
+    active_users = User.query.filter(User.subscription_status == 'active').count()
+    trial_users = User.query.filter(User.subscription_status == 'trial').count()
+    
+    # Get recent registrations
+    recent_users = User.query.order_by(User.created_at.desc()).limit(10).all()
+    
+    # Get recent payments
+    recent_payments = Payment.query.filter_by(status='completed').order_by(Payment.updated_at.desc()).limit(10).all()
+    
+    # Get modules structure
     modules = {}
     base_path = "modules_data"
     if os.path.exists(base_path):
-        # Get sorted list of folders
         folders = sorted(os.listdir(base_path))
         for folder in folders:
             folder_path = os.path.join(base_path, folder)
             if os.path.isdir(folder_path):
                 submodules = []
-                # Get sorted list of files
                 files = sorted(os.listdir(folder_path))
                 for filename in files:
                     if filename.endswith(".md"):
@@ -51,7 +61,16 @@ def dashboard():
 
     msg = request.args.get("msg")
     error = request.args.get("error")
-    return render_template("admin_dashboard.html", modules=modules, msg=msg, error=error)
+    
+    return render_template('admin/dashboard.html',
+                          total_users=total_users,
+                          active_users=active_users,
+                          trial_users=trial_users,
+                          recent_users=recent_users,
+                          recent_payments=recent_payments,
+                          modules=modules,
+                          msg=msg,
+                          error=error)
 
 @admin_bp.route("/modules")
 @admin_required
@@ -316,29 +335,29 @@ def user_detail(user_id):
 def update_user(user_id):
     """Update user from admin panel"""
     user = User.query.get_or_404(user_id)
-
+    
     # Update user fields
-    if "role" in request.form:
-        user.role = request.form.get("role")
-
-    if "subscription_status" in request.form:
-        user.subscription_status = request.form.get("subscription_status")
-
-    if "subscription_type" in request.form:
-        user.subscription_type = request.form.get("subscription_type")
-
-    if "subscription_end" in request.form:
-        end_date = request.form.get("subscription_end")
+    if 'role' in request.form:
+        user.role = request.form.get('role')
+    
+    if 'subscription_status' in request.form:
+        user.subscription_status = request.form.get('subscription_status')
+    
+    if 'subscription_type' in request.form:
+        user.subscription_type = request.form.get('subscription_type')
+    
+    if 'subscription_end' in request.form:
+        end_date = request.form.get('subscription_end')
         if end_date:
             user.subscription_end = datetime.fromisoformat(end_date)
         else:
             user.subscription_end = None
-
+    
     db.session.add(UserLog(user_id=user.id, action=f"admin updated user profile"))
     db.session.commit()
-
-    flash(f'User "{user.username}" updated successfully', "success")
-    return redirect(url_for("admin.user_detail", user_id=user.id))
+    
+    flash(f'User "{user.username}" updated successfully', 'success')
+    return redirect(url_for('admin.user_detail', user_id=user.id))
 
 
 @admin_bp.route("/payments")
@@ -392,23 +411,36 @@ def create_plan():
 def edit_plan(plan_id):
     """Edit a payment plan"""
     plan = PaymentPlan.query.get_or_404(plan_id)
-
+    
     if request.method == "POST":
         # Update plan
         plan.name = request.form.get("name")
         plan.description = request.form.get("description")
-        plan.price_usd = int(
-            float(request.form.get("price_usd", 0)) * 100
-        )  # Convert to cents
-
+        plan.price_usd = int(float(request.form.get("price_usd", 0)) * 100)  # Convert to cents
+        
         duration_days = request.form.get("duration_days")
         plan.duration_days = int(duration_days) if duration_days else None
-
+        
         plan.is_active = request.form.get("is_active") == "on"
-
+        
         db.session.commit()
-
+        
         flash(f'Plan "{plan.name}" updated successfully', "success")
         return redirect(url_for("admin.plans"))
-
+    
     return render_template("admin/edit_plan.html", plan=plan)
+
+
+# Error handlers
+@admin_bp.errorhandler(404)
+def page_not_found(e):
+    return render_template('errors/404.html'), 404
+
+@admin_bp.errorhandler(403)
+def forbidden(e):
+    return render_template('errors/403.html'), 403
+
+@admin_bp.errorhandler(500)
+def server_error(e):
+    logger.error(f"Server error: {str(e)}")
+    return render_template('errors/500.html'), 500
