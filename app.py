@@ -56,7 +56,9 @@ if __name__ == '__main__':
                 password_hash=generate_password_hash('adminpass123'),
                 role='admin',
                 paid=True,
-                is_verified=True
+                is_verified=True,
+                subscription_type='lifetime',
+                subscription_status='active'
             )
             db.session.add(admin_user)
             db.session.commit()
