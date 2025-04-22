@@ -70,9 +70,11 @@ def login():
             db.session.add(UserLog(user_id=user.id, action="logged in"))
             db.session.commit()
 
+            print(f"User role: {user.role}")  # Debug print
             if user.role == "admin":
                 return redirect(url_for("dashboard"))
-            return redirect(url_for("modules"))
+            else:
+                return redirect(url_for("modules"))
 
         return render_template("login.html", error="Invalid credentials")
 
