@@ -21,9 +21,7 @@ import logging
 import os
 from datetime import datetime, timedelta
 
-from models.user import User
-from models.payment import Payment, PaymentPlan
-from models.logs import UserLog
+from models import User, Payment, PaymentPlan, UserLog
 from utils.decorators import login_required
 from utils.email import send_email
 from extensions import db, limiter

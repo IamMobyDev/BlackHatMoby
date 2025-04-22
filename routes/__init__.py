@@ -9,7 +9,7 @@ from flask import Blueprint
 from .main import main_bp
 from .auth import auth_bp
 from .modules import modules_bp
-from .payment import payment_bp
+
 from .admin import admin_bp
 
 # List of all blueprints to register with the app
