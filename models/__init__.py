@@ -20,6 +20,9 @@ class User(db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+        
+    def has_active_subscription(self):
+        return self.paid or self.role == 'admin'
 
 class Module(db.Model):
     __tablename__ = 'modules'
