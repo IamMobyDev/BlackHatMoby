@@ -76,7 +76,7 @@ def edit_module_basic(module_id):
 
 @admin_bp.route("/modules/<int:module_id>/submodules/create", methods=["GET", "POST"])
 @admin_required
-def create_submodule(module_id):
+def create_module_submodule(module_id):
     module = Module.query.get_or_404(module_id)
     if request.method == "POST":
         submodule = Submodule(
