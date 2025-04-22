@@ -13,13 +13,12 @@ import uuid
 from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import timedelta, datetime
 from models import db, User, Module, Submodule, ModuleCompletion, UserLog, PaymentPlan, Payment, EmailLog
 import functools
 from flask_mail import Mail, Message
 import threading
-from extensions import db, csrf, limiter, mail
 
 # Load environment variables
 load_dotenv()
@@ -45,9 +44,9 @@ app.config.update(
 
 # Initialize extensions
 db.init_app(app)
-mail.init_app(app)
-limiter.init_app(app)
-csrf.init_app(app)
+mail = Mail(app)
+limiter = Limiter(get_remote_address, app=app)
+csrf = CSRFProtect(app)
 
 # Configure logging
 logging.basicConfig(
@@ -57,18 +56,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger('blackmoby')
 
-# Import routes after app is created to avoid circular imports
+# Import and register blueprints
 from routes.admin import admin_bp
-from routes.payment import payment_bp
 from routes.auth import auth_bp
 from routes.modules import modules_bp
+from routes.payment import payment_bp
 from routes.main import main_bp
 
-# Register blueprints
 app.register_blueprint(admin_bp)
-app.register_blueprint(payment_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(modules_bp)
+app.register_blueprint(payment_bp)
 app.register_blueprint(main_bp)
 
 # Create database tables before first request
