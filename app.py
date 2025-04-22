@@ -40,8 +40,7 @@ app.register_blueprint(modules_bp)
 app.register_blueprint(main_bp)
 
 # Create database tables before first request
-@app.before_first_request
-def create_tables():
+with app.app_context():
     db.create_all()
 
 if __name__ == '__main__':
