@@ -12,6 +12,10 @@ class User(db.Model):
     role = db.Column(db.String(20), default='user', nullable=False)
     is_verified = db.Column(db.Boolean, default=False)
     paid = db.Column(db.Boolean, default=False)
+    subscription_type = db.Column(db.String(20), nullable=True)  # 'trial', 'yearly', 'lifetime'
+    subscription_status = db.Column(db.String(20), nullable=True)  # 'active', 'expired', etc
+    subscription_start = db.Column(db.DateTime, nullable=True)
+    subscription_end = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
