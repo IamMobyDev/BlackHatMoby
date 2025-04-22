@@ -91,3 +91,13 @@ class EmailLog(db.Model):
     email_type = db.Column(db.String(50), nullable=False)
     sent_at = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), default='sent')
+
+class PaymentPlan(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    slug = db.Column(db.String(50), unique=True, nullable=False)
+    description = db.Column(db.Text)
+    price_usd = db.Column(db.Integer, nullable=False)  # Stored in cents
+    duration_days = db.Column(db.Integer)  # Null for lifetime plans
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
