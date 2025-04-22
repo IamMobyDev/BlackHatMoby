@@ -1,4 +1,5 @@
-from flask import Flask
+
+from flask import Flask, render_template, redirect, url_for, request, session, abort
 from dotenv import load_dotenv
 import os
 from datetime import timedelta
@@ -14,8 +15,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blackmoby.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Secrets and CSRF
-app.secret_key = os.getenv('SECRET_KEY')
-app.config['WTF_CSRF_SECRET_KEY'] = os.getenv('WTF_CSRF_SECRET_KEY')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-123')
+app.config['WTF_CSRF_SECRET_KEY'] = os.getenv('WTF_CSRF_SECRET_KEY', 'csrf-key-123')
 app.permanent_session_lifetime = timedelta(minutes=30)
 
 # Initialize extensions
@@ -40,8 +41,10 @@ app.register_blueprint(main_bp)
 
 if __name__ == '__main__':
     with app.app_context():
+        # Create all database tables
         db.create_all()
-
+        
+        # Create admin user if it doesn't exist
         if not User.query.filter_by(username='admin').first():
             admin_user = User(
                 username='admin',
