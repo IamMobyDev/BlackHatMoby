@@ -22,7 +22,29 @@ class User(db.Model):
         return check_password_hash(self.password_hash, password)
         
     def has_active_subscription(self):
-        return self.paid or self.role == 'admin'
+        return self.subscription_type in ['trial', 'yearly', 'lifetime'] or self.role == 'admin'
+        
+    def can_access_module(self, module):
+        if self.role == 'admin':
+            return True
+            
+        if not self.subscription_type:
+            return False
+            
+        if self.subscription_type == 'trial':
+            # Trial users can only access first 2 modules
+            accessible_modules = Module.query.order_by(Module.order).limit(2).all()
+            return module in [m.slug for m in accessible_modules]
+            
+        if self.subscription_type == 'yearly':
+            # Yearly users can access all core modules but not standalone
+            return not module.is_standalone
+            
+        if self.subscription_type == 'lifetime':
+            # Lifetime users can access everything
+            return True
+            
+        return False
 
 class Module(db.Model):
     __tablename__ = 'modules'

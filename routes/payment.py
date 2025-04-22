@@ -64,11 +64,28 @@ def verify_paystack_signature(payload, signature):
 def pricing():
     """Pricing page - user must be logged in to see this"""
     user = User.query.get(session["user_id"])
-    plans = (
-        PaymentPlan.query.filter_by(is_active=True)
-        .order_by(PaymentPlan.price_usd)
-        .all()
-    )
+
+    # Define available plans
+    plans = [
+        {
+            'name': '1-Day Trial',
+            'price': 'Free',
+            'slug': 'trial',
+            'features': ['Access to 2 core modules', 'No lab access', 'Limited time access']
+        },
+        {
+            'name': '1-Year Access',
+            'price': '₦50,000',
+            'slug': 'yearly',
+            'features': ['All core modules', 'Core lab access', 'No standalone content']
+        },
+        {
+            'name': 'Lifetime Access',
+            'price': '₦150,000',
+            'slug': 'lifetime',
+            'features': ['All modules', 'All labs', 'Standalone content', 'Lifetime updates']
+        }
+    ]
 
     msg = request.args.get("msg")
     error = request.args.get("error")

@@ -111,10 +111,8 @@ def register():
         session["user_id"] = new_user.id
         session["role"] = new_user.role
 
-        flash(
-            "Account created successfully! Please check your email to verify your account.",
-            "success",
-        )
+        # After registration, redirect to pricing
+        flash("Account created successfully! Please select a subscription plan.", "success")
         return redirect(url_for("payment.pricing"))
 
     return render_template("register.html", form=form)

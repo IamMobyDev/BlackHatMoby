@@ -28,6 +28,10 @@ logger = logging.getLogger("blackmoby")
 @main_bp.route("/")
 def index():
     """Landing page"""
+    if "user_id" in session:
+        user = User.query.get(session["user_id"])
+        if user and user.subscription_type:
+            return redirect(url_for("modules.modules_list"))
     return render_template("landing.html")
 
 
