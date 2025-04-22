@@ -62,7 +62,7 @@ def dashboard():
     msg = request.args.get("msg")
     error = request.args.get("error")
     
-    return render_template('admin/dashboard.html',
+    return render_template('admin_dashboard.html',
                           total_users=total_users,
                           active_users=active_users,
                           trial_users=trial_users,
