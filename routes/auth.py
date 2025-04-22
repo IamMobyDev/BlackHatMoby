@@ -48,6 +48,8 @@ def login():
             next_page = request.args.get("next")
             if next_page:
                 return redirect(next_page)
+            elif user.role == "admin":
+                return redirect(url_for("admin.dashboard"))
             elif user.has_active_subscription():
                 return redirect(url_for("modules.modules_list"))
             else:
