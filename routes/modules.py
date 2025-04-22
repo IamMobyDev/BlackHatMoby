@@ -13,7 +13,8 @@ from flask import (
     jsonify,
     request,
 )
-from models import db, User, Module, Submodule, ModuleCompletion, UserLog
+from models import User, Module, Submodule, ModuleCompletion, UserLog
+from extensions import db
 from utils.decorators import login_required, subscription_required
 import os
 import markdown
