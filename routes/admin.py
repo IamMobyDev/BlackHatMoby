@@ -28,13 +28,30 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 @admin_required
 def dashboard():
     """Admin dashboard"""
-    modules = Module.query.order_by(Module.title).all() #Sort modules alphanumerically by title
-    return render_template(
-        "admin_dashboard.html",
-        User=User,
-        Module=Module,
-        modules=modules #Pass sorted modules to template
-    )
+    modules = {}
+    base_path = "modules_data"
+    if os.path.exists(base_path):
+        # Get sorted list of folders
+        folders = sorted(os.listdir(base_path))
+        for folder in folders:
+            folder_path = os.path.join(base_path, folder)
+            if os.path.isdir(folder_path):
+                submodules = []
+                # Get sorted list of files
+                files = sorted(os.listdir(folder_path))
+                for filename in files:
+                    if filename.endswith(".md"):
+                        slug = filename.replace(".md", "")
+                        submodules.append({
+                            "slug": slug,
+                            "filename": filename,
+                            "module": folder
+                        })
+                modules[folder] = submodules
+
+    msg = request.args.get("msg")
+    error = request.args.get("error")
+    return render_template("admin_dashboard.html", modules=modules, msg=msg, error=error)
 
 @admin_bp.route("/modules")
 @admin_required
