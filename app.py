@@ -317,9 +317,11 @@ def dashboard():
                         })
                 modules[folder] = submodules
 
+    print(f"User role: {user.role}")  # Debug print
+    print(f"Modules: {modules}")  # Debug print
     msg = request.args.get("msg")
     error = request.args.get("error")
-    return render_template("admin_dashboard.html", modules=modules, msg=msg, error=error)
+    return render_template("admin_dashboard.html", modules=modules, msg=msg, error=error, user=user)
 
 
 @app.route('/module/<module>/<slug>')
