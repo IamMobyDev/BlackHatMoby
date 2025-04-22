@@ -16,6 +16,8 @@ class User(db.Model):
     subscription_status = db.Column(db.String(20), nullable=True)  # 'active', 'expired', etc
     subscription_start = db.Column(db.DateTime, nullable=True)
     subscription_end = db.Column(db.DateTime, nullable=True)
+    verification_token = db.Column(db.String(100), unique=True, nullable=True)
+    verification_sent_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
