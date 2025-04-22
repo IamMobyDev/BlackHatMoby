@@ -110,6 +110,25 @@ def create_module_submodule(module_id):
         return redirect(url_for("admin.dashboard"))
     return render_template("admin_create_module.html", module=module, is_submodule=True)
 
+@admin_bp.route("/modules/<module>/<slug>/delete", methods=["POST"])
+@admin_required
+def delete_module(module, slug):
+    """Delete a module"""
+    filepath = f"modules_data/{module}/{slug}.md"
+    backup_dir = "module_backups"
+    if not os.path.exists(backup_dir):
+        os.makedirs(backup_dir)
+
+    import time, shutil
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    if os.path.exists(filepath):
+        backup_path = f"{backup_dir}/{module}-{slug}-{timestamp}.md"
+        shutil.copy2(filepath, backup_path)
+        os.remove(filepath)
+        return redirect(url_for('admin.dashboard', msg=f"Module '{slug}' deleted successfully!"))
+    else:
+        return redirect(url_for('admin.dashboard', error=f"Module '{slug}' not found."))
+
 @admin_bp.route("/submodules/<int:submodule_id>/delete", methods=["POST"])
 @admin_required
 def delete_submodule(submodule_id):
