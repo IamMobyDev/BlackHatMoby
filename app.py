@@ -9,6 +9,7 @@ import hashlib
 import requests
 import logging
 import uuid
+import functools
 from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -297,8 +298,6 @@ def create_module():
 def dashboard():
     user_id = session.get("user_id")
     user = User.query.get(user_id)
-    if not user or user.role != 'admin':
-        abort(403)
 
     modules = {}
     base_path = "modules_data"
