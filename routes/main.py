@@ -28,15 +28,6 @@ logger = logging.getLogger("blackmoby")
 @main_bp.route("/")
 def index():
     """Landing page"""
-    # If user is already logged in, redirect to modules or pricing based on subscription
-    if "user_id" in session:
-        user = User.query.get(session["user_id"])
-        if user:
-            if user.has_active_subscription():
-                return redirect(url_for("modules.modules_list"))
-            else:
-                return redirect(url_for("payment.pricing"))
-
     return render_template("landing.html")
 
 
