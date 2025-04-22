@@ -10,10 +10,7 @@ from flask import (
 )
 from datetime import datetime, timedelta
 
-from models.user import User
-from models.module import Module, Submodule, ModuleCompletion
-from models.payment import Payment, PaymentPlan
-from models.logs import UserLog
+from models import User, Module, Submodule, ModuleCompletion, Payment, PaymentPlan, UserLog
 from forms.module import CreateModuleForm, CreateSubmoduleForm
 from utils.decorators import admin_required
 from extensions import db
