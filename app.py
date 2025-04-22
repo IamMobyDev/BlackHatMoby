@@ -90,12 +90,12 @@ class RegistrationForm(FlaskForm):
         EqualTo('password', message='Passwords must match')
     ])
     submit = SubmitField('Register')
-    
+
     def validate_username(self, username):
         user = User.query.filter_by(username=username.data).first()
         if user:
             raise ValidationError('Username already taken. Please choose a different one.')
-    
+
     def validate_email(self, email):
         user = User.query.filter_by(email=email.data).first()
         if user:
@@ -138,10 +138,10 @@ def send_email(subject, recipient, template, **kwargs):
     try:
         msg = Message(subject, recipients=[recipient])
         msg.html = render_template(template, **kwargs)
-        
+
         # Send email in background thread to avoid blocking
         threading.Thread(target=send_email_async, args=(app, msg)).start()
-        
+
         # Log email in database if user_id is provided
         if 'user_id' in kwargs:
             email_log = EmailLog(
@@ -153,11 +153,11 @@ def send_email(subject, recipient, template, **kwargs):
             )
             db.session.add(email_log)
             db.session.commit()
-        
+
         return True
     except Exception as e:
         logger.error(f"Email sending error: {str(e)}")
-        
+
         # Log failed email if user_id is provided
         if 'user_id' in kwargs:
             email_log = EmailLog(
@@ -169,7 +169,7 @@ def send_email(subject, recipient, template, **kwargs):
             )
             db.session.add(email_log)
             db.session.commit()
-        
+
         return False
 
 def generate_verification_token():
@@ -196,11 +196,11 @@ def admin_required(view):
     def wrapped_view(*args, **kwargs):
         if 'user_id' not in session:
             return redirect(url_for('login', next=request.path))
-            
+
         user = User.query.get(session['user_id'])
         if not user or user.role != 'admin':
             abort(403)
-            
+
         return view(*args, **kwargs)
     return wrapped_view
 
@@ -210,19 +210,19 @@ def subscription_required(view):
     def wrapped_view(*args, **kwargs):
         if 'user_id' not in session:
             return redirect(url_for('login', next=request.path))
-            
+
         user = User.query.get(session['user_id'])
         if not user:
             return redirect(url_for('login'))
-            
+
         # Admins can access everything
         if user.role == 'admin':
             return view(*args, **kwargs)
-            
+
         # Check if user has an active subscription
         if not user.has_active_subscription():
             return redirect(url_for('pricing', error="This content requires an active subscription"))
-            
+
         # For specific module access, the view needs to do further checks with user.can_access_module()
         return view(*args, **kwargs)
     return wrapped_view
@@ -253,7 +253,7 @@ def index():
                 return redirect(url_for('modules'))
             else:
                 return redirect(url_for('pricing'))
-    
+
     return render_template('landing.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -262,21 +262,21 @@ def login():
     """User login page"""
     if 'user_id' in session:
         return redirect(url_for('modules'))
-        
+
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
-        
+
         if user and check_password_hash(user.password_hash, form.password.data):
             session.permanent = True
             session['user_id'] = user.id
             session['role'] = user.role
-            
+
             # Update last login time
             user.last_login = datetime.utcnow()
             db.session.add(UserLog(user_id=user.id, action="logged in"))
             db.session.commit()
-            
+
             # Redirect to the next page or modules/pricing based on subscription
             next_page = request.args.get('next')
             if next_page:
@@ -285,9 +285,9 @@ def login():
                 return redirect(url_for('modules'))
             else:
                 return redirect(url_for('pricing'))
-        
+
         flash('Invalid username or password', 'error')
-    
+
     return render_template('login.html', form=form)
 
 @app.route('/logout')
@@ -297,7 +297,7 @@ def logout():
     if user_id:
         db.session.add(UserLog(user_id=user_id, action="logged out"))
         db.session.commit()
-    
+
     session.clear()
     return redirect(url_for('index'))
 
@@ -307,7 +307,7 @@ def register():
     """User registration page"""
     if 'user_id' in session:
         return redirect(url_for('modules'))
-        
+
     form = RegistrationForm()
     if form.validate_on_submit():
         # Create new user
@@ -319,11 +319,11 @@ def register():
             verification_token=verification_token,
             verification_sent_at=datetime.utcnow()
         )
-        
+
         db.session.add(new_user)
         db.session.add(UserLog(user_id=new_user.id, action="registered"))
         db.session.commit()
-        
+
         # Send verification email
         send_email(
             subject="Verify Your Email Address",
@@ -334,40 +334,40 @@ def register():
             username=new_user.username,
             verification_url=url_for('verify_email', token=verification_token, _external=True)
         )
-        
+
         # Log the user in
         session.permanent = True
         session['user_id'] = new_user.id
         session['role'] = new_user.role
-        
+
         flash('Account created successfully! Please check your email to verify your account.', 'success')
         return redirect(url_for('pricing'))
-    
+
     return render_template('register.html', form=form)
 
 @app.route('/verify-email/<token>')
 def verify_email(token):
     """Email verification route"""
     user = User.query.filter_by(verification_token=token).first()
-    
+
     if not user:
         flash('Invalid or expired verification link', 'error')
         return redirect(url_for('index'))
-    
+
     # Verify user's email
     user.is_verified = True
     user.verification_token = None
     db.session.add(UserLog(user_id=user.id, action="verified email"))
     db.session.commit()
-    
+
     flash('Your email has been verified! You can now fully use your account.', 'success')
-    
+
     # Log the user in if not already logged in
     if 'user_id' not in session:
         session.permanent = True
         session['user_id'] = user.id
         session['role'] = user.role
-    
+
     return redirect(url_for('pricing'))
 
 @app.route('/pricing')
@@ -376,10 +376,10 @@ def pricing():
     """Pricing page - user must be logged in to see this"""
     user = User.query.get(session['user_id'])
     plans = PaymentPlan.query.filter_by(is_active=True).order_by(PaymentPlan.price_usd).all()
-    
+
     msg = request.args.get('msg')
     error = request.args.get('error')
-    
+
     return render_template('pricing.html', 
                           user=user, 
                           plans=plans, 
@@ -391,33 +391,33 @@ def pricing():
 def activate_trial():
     """Activate a free trial subscription"""
     user = User.query.get(session['user_id'])
-    
+
     # Check if user already has an active subscription
     if user.has_active_subscription():
         return redirect(url_for('modules'))
-    
+
     # Check if user already used their trial
     if UserLog.query.filter_by(user_id=user.id, action="activated trial").first():
         flash('You have already used your free trial', 'error')
         return redirect(url_for('pricing'))
-    
+
     # Get trial plan
     trial_plan = PaymentPlan.query.filter_by(slug='trial').first()
     if not trial_plan:
         flash('Trial plan not available', 'error')
         return redirect(url_for('pricing'))
-    
+
     # Activate trial
     now = datetime.utcnow()
     user.subscription_status = 'trial'
     user.subscription_type = 'trial'
     user.subscription_start = now
     user.subscription_end = now + timedelta(days=trial_plan.duration_days)
-    
+
     # Log the action
     db.session.add(UserLog(user_id=user.id, action="activated trial"))
     db.session.commit()
-    
+
     # Send confirmation email
     send_email(
         subject="Your Free Trial Has Started",
@@ -428,7 +428,7 @@ def activate_trial():
         username=user.username,
         trial_end=user.subscription_end
     )
-    
+
     flash('Your free trial has been activated!', 'success')
     return redirect(url_for('modules'))
 
@@ -438,20 +438,20 @@ def activate_trial():
 def initiate_payment(plan_slug):
     """Initiate a payment for a subscription plan"""
     user = User.query.get(session['user_id'])
-    
+
     # Find the plan
     plan = PaymentPlan.query.filter_by(slug=plan_slug, is_active=True).first()
     if not plan:
         flash('Invalid plan selected', 'error')
         return redirect(url_for('pricing'))
-    
+
     # Don't allow initiating payment for free trial
     if plan.slug == 'trial':
         return redirect(url_for('activate_trial'))
-    
+
     # Create a unique reference
     reference = f"pay_{user.id}_{int(time.time())}"
-    
+
     # Store the payment attempt
     payment = Payment(
         user_id=user.id,
@@ -461,13 +461,13 @@ def initiate_payment(plan_slug):
         status='pending',
         ip_address=request.remote_addr
     )
-    
+
     db.session.add(payment)
     db.session.add(UserLog(user_id=user.id, action=f"initiated {plan.slug} payment ({reference})"))
     db.session.commit()
-    
+
     payment_logger.info(f"Payment initiated: {reference} for user {user.id}, plan: {plan.slug}")
-    
+
     # Render payment page with Paystack integration
     return render_template('payment.html',
                           user=user,
@@ -616,12 +616,12 @@ def payment_success(reference):
     """Payment success page"""
     user = User.query.get(session['user_id'])
     payment = Payment.query.filter_by(reference=reference, user_id=user.id).first()
-    
+
     if not payment or payment.status != 'completed':
         return redirect(url_for('pricing'))
-    
+
     plan = PaymentPlan.query.get(payment.plan_id)
-    
+
     return render_template('payment_success.html', 
                           user=user, 
                           payment=payment, 
@@ -636,21 +636,21 @@ def payment_webhook():
     if not signature:
         payment_logger.warning("Webhook called without signature")
         return jsonify(status='error'), 400
-    
+
     payload = request.data
     if not verify_paystack_signature(payload, signature):
         payment_logger.warning("Invalid webhook signature")
         return jsonify(status='error'), 400
-    
+
     # Parse the webhook data
     try:
         event_data = json.loads(payload)
         event = event_data.get('event')
         data = event_data.get('data', {})
         reference = data.get('reference')
-        
+
         payment_logger.info(f"Webhook received: {event} for reference {reference}")
-        
+
         # Handle different webhook events
         if event == 'charge.success':
             # Find payment in database
@@ -658,33 +658,33 @@ def payment_webhook():
             if not payment:
                 payment_logger.warning(f"Payment not found for webhook: {reference}")
                 return jsonify(status='error'), 404
-            
+
             # Update payment status
             payment.status = 'completed'
             payment.transaction_id = data.get('id')
-            
+
             # Get user and plan
             user = User.query.get(payment.user_id)
             plan = PaymentPlan.query.get(payment.plan_id)
-            
+
             if user and plan:
                 # Update user subscription
                 now = datetime.utcnow()
                 user.subscription_status = 'active'
                 user.subscription_type = plan.slug
                 user.subscription_start = now
-                
+
                 # Set subscription end date based on plan duration
                 if plan.duration_days:
                     user.subscription_end = now + timedelta(days=plan.duration_days)
                 else:
                     # For lifetime plans
                     user.subscription_end = None
-                
+
                 # Log the action
                 db.session.add(UserLog(user_id=user.id, action=f"webhook activated {plan.slug} subscription"))
                 db.session.commit()
-                
+
                 # Send email notification
                 send_email(
                     subject="Payment Confirmed - Subscription Activated",
@@ -696,18 +696,18 @@ def payment_webhook():
                     plan_name=plan.name,
                     subscription_end=user.subscription_end
                 )
-                
+
                 payment_logger.info(f"Webhook processed successfully: {reference}")
                 return jsonify(status='success'), 200
             else:
                 payment_logger.error(f"User or plan not found for webhook: {reference}")
                 return jsonify(status='error'), 404
-        
+
         # Add other webhook events as needed
-        
+
         # Default response for unhandled events
         return jsonify(status='success'), 200
-        
+
     except Exception as e:
         payment_logger.error(f"Error processing webhook: {str(e)}")
         return jsonify(status='error'), 500
@@ -718,10 +718,10 @@ def payment_webhook():
 def modules():
     """Display all accessible modules"""
     user = User.query.get(session['user_id'])
-    
+
     # Get all modules ordered by their display order
     all_modules = Module.query.order_by(Module.order).all()
-    
+
     # Filter modules based on user access
     accessible_modules = []
     for module in all_modules:
@@ -729,7 +729,7 @@ def modules():
             # Calculate progress for this module
             submodule_count = len(module.submodules)
             completed_count = 0
-            
+
             if submodule_count > 0:
                 # Count completed submodules for this module
                 for submodule in module.submodules:
@@ -737,14 +737,14 @@ def modules():
                         user_id=user.id, 
                         submodule_id=submodule.id
                     ).first()
-                    
+
                     if completion:
                         completed_count += 1
-                
+
                 progress = int((completed_count / submodule_count) * 100)
             else:
                 progress = 0
-            
+
             # Add module with progress to accessible list
             accessible_modules.append({
                 'module': module,
@@ -752,7 +752,7 @@ def modules():
                 'completed': completed_count,
                 'total': submodule_count
             })
-    
+
     return render_template('modules.html', 
                           user=user, 
                           modules=accessible_modules)
@@ -764,12 +764,12 @@ def module_detail(module_slug):
     """Display a specific module with its submodules"""
     user = User.query.get(session['user_id'])
     module = Module.query.filter_by(slug=module_slug).first_or_404()
-    
+
     # Check if user can access this module
     if not user.can_access_module(module_slug):
         flash('You need an active subscription to access this module', 'error')
         return redirect(url_for('pricing'))
-    
+
     # Get all submodules for this module with completion status
     submodules_with_status = []
     for submodule in module.submodules:
@@ -777,13 +777,13 @@ def module_detail(module_slug):
             user_id=user.id, 
             submodule_id=submodule.id
         ).first()
-        
+
         submodules_with_status.append({
             'submodule': submodule,
             'completed': completion is not None,
             'completed_at': completion.completed_at if completion else None
         })
-    
+
     return render_template('module_detail.html', 
                           user=user, 
                           module=module,
@@ -796,15 +796,15 @@ def submodule_detail(module_slug, submodule_slug):
     """Display a specific submodule content"""
     user = User.query.get(session['user_id'])
     module = Module.query.filter_by(slug=module_slug).first_or_404()
-    
+
     # Check if user can access this module
     if not user.can_access_module(module_slug):
         flash('You need an active subscription to access this content', 'error')
         return redirect(url_for('pricing'))
-    
+
     # Find the submodule
     submodule = Submodule.query.filter_by(module_id=module.id, slug=submodule_slug).first_or_404()
-    
+
     # Get content for the submodule (from file or database)
     try:
         content_file = f"content/modules/{module_slug}/{submodule_slug}.md"
@@ -813,26 +813,26 @@ def submodule_detail(module_slug, submodule_slug):
                 content = f.read()
         else:
             content = "Content not found for this submodule."
-        
+
         # Convert markdown to HTML
         html_content = markdown.markdown(content, extensions=['fenced_code', 'tables'])
     except Exception as e:
         logger.error(f"Error loading submodule content: {str(e)}")
         html_content = "<p>Error loading content. Please try again later.</p>"
-    
+
     # Check if user has completed this submodule
     completion = ModuleCompletion.query.filter_by(
         user_id=user.id, 
         submodule_id=submodule.id
     ).first()
-    
+
     # Get next and previous submodules for navigation
     submodules = module.submodules
     current_index = next((i for i, s in enumerate(submodules) if s.id == submodule.id), -1)
-    
+
     prev_submodule = submodules[current_index - 1] if current_index > 0 else None
     next_submodule = submodules[current_index + 1] if current_index < len(submodules) - 1 else None
-    
+
     return render_template('submodule_detail.html', 
                           user=user, 
                           module=module,
@@ -850,17 +850,17 @@ def mark_complete(submodule_id):
     user = User.query.get(session['user_id'])
     submodule = Submodule.query.get_or_404(submodule_id)
     module = Module.query.get(submodule.module_id)
-    
+
     # Check if user can access this module
     if not user.can_access_module(module.slug):
         return jsonify(success=False, error="Access denied"), 403
-    
+
     # Check if already completed
     completion = ModuleCompletion.query.filter_by(
         user_id=user.id, 
         submodule_id=submodule.id
     ).first()
-    
+
     if not completion:
         # Mark as completed
         completion = ModuleCompletion(
@@ -870,7 +870,7 @@ def mark_complete(submodule_id):
         db.session.add(completion)
         db.session.add(UserLog(user_id=user.id, action=f"completed submodule {submodule.id}"))
         db.session.commit()
-    
+
     return jsonify(success=True)
 
 
@@ -879,37 +879,37 @@ def mark_complete(submodule_id):
 def profile():
     """User profile page"""
     user = User.query.get(session['user_id'])
-    
+
     # Get user statistics
     total_modules = Module.query.count()
     accessible_modules = 0
     completed_submodules = 0
     total_accessible_submodules = 0
-    
+
     # Calculate modules and submodules statistics
     for module in Module.query.all():
         if user.can_access_module(module.slug):
             accessible_modules += 1
             for submodule in module.submodules:
                 total_accessible_submodules += 1
-                
+
                 completion = ModuleCompletion.query.filter_by(
                     user_id=user.id, 
                     submodule_id=submodule.id
                 ).first()
-                
+
                 if completion:
                     completed_submodules += 1
-    
+
     # Calculate overall progress
     if total_accessible_submodules > 0:
         progress = int((completed_submodules / total_accessible_submodules) * 100)
     else:
         progress = 0
-    
+
     # Get subscription information
     active_subscription = user.has_active_subscription()
-    
+
     if active_subscription:
         if user.subscription_type == 'lifetime':
             subscription_info = "Lifetime Access"
@@ -919,14 +919,14 @@ def profile():
                 days_left = (user.subscription_end - datetime.utcnow()).days
                 if days_left < 0:
                     days_left = 0
-            
+
             subscription_info = f"{user.subscription_type.capitalize()} Subscription ({days_left} days left)"
     else:
         subscription_info = "No active subscription"
-    
+
     # Get recent activity
     recent_logs = UserLog.query.filter_by(user_id=user.id).order_by(UserLog.timestamp.desc()).limit(10).all()
-    
+
     return render_template('profile.html', 
                           user=user,
                           progress=progress,
@@ -947,13 +947,13 @@ def admin_dashboard():
     total_users = User.query.count()
     active_users = User.query.filter(User.subscription_status == 'active').count()
     trial_users = User.query.filter(User.subscription_status == 'trial').count()
-    
+
     # Get recent registrations
     recent_users = User.query.order_by(User.created_at.desc()).limit(10).all()
-    
+
     # Get recent payments
     recent_payments = Payment.query.filter_by(status='completed').order_by(Payment.updated_at.desc()).limit(10).all()
-    
+
     return render_template('admin/dashboard.html',
                           total_users=total_users,
                           active_users=active_users,
@@ -968,7 +968,7 @@ def admin_modules():
     """Admin module management"""
     modules = Module.query.order_by(Module.order).all()
     form = CreateModuleForm()
-    
+
     return render_template('admin/modules.html',
                           modules=modules,
                           form=form)
@@ -979,14 +979,14 @@ def admin_modules():
 def admin_create_module():
     """Create a new module"""
     form = CreateModuleForm()
-    
+
     if form.validate_on_submit():
         # Check if module with this slug already exists
         existing = Module.query.filter_by(slug=form.slug.data).first()
         if existing:
             flash('A module with this slug already exists', 'error')
             return redirect(url_for('admin_modules'))
-        
+
         # Create new module
         module = Module(
             title=form.title.data,
@@ -995,20 +995,20 @@ def admin_create_module():
             order=form.order.data,
             trial_accessible=form.trial_accessible.data
         )
-        
+
         db.session.add(module)
         db.session.commit()
-        
+
         # Create directory for module content if it doesn't exist
         module_dir = f"content/modules/{module.slug}"
         os.makedirs(module_dir, exist_ok=True)
-        
+
         flash(f'Module "{module.title}" created successfully', 'success')
     else:
         for field, errors in form.errors.items():
             for error in errors:
                 flash(f"{field}: {error}", 'error')
-    
+
     return redirect(url_for('admin_modules'))
 
 
@@ -1017,18 +1017,18 @@ def admin_create_module():
 def admin_edit_module(module_id):
     """Edit a module"""
     module = Module.query.get_or_404(module_id)
-    
+
     if request.method == 'POST':
         # Update module fields
         module.title = request.form.get('title')
         module.description = request.form.get('description')
         module.order = int(request.form.get('order', 0))
         module.trial_accessible = request.form.get('trial_accessible') == 'on'
-        
+
         db.session.commit()
         flash(f'Module "{module.title}" updated successfully', 'success')
         return redirect(url_for('admin_modules'))
-    
+
     return render_template('admin/edit_module.html', module=module)
 
 
@@ -1037,11 +1037,11 @@ def admin_edit_module(module_id):
 def admin_submodules():
     """Admin submodule management"""
     submodules = Submodule.query.join(Module).order_by(Module.order, Submodule.order).all()
-    
+
     # Create form for new submodule
     form = CreateSubmoduleForm()
     form.module_id.choices = [(m.id, m.title) for m in Module.query.order_by(Module.order).all()]
-    
+
     return render_template('admin/submodules.html',
                           submodules=submodules,
                           form=form)
@@ -1053,19 +1053,19 @@ def admin_create_submodule():
     """Create a new submodule"""
     form = CreateSubmoduleForm()
     form.module_id.choices = [(m.id, m.title) for m in Module.query.order_by(Module.order).all()]
-    
+
     if form.validate_on_submit():
         module = Module.query.get(form.module_id.data)
         if not module:
             flash('Selected module does not exist', 'error')
             return redirect(url_for('admin_submodules'))
-        
+
         # Check if submodule with this slug already exists for this module
         existing = Submodule.query.filter_by(module_id=module.id, slug=form.slug.data).first()
         if existing:
             flash('A submodule with this slug already exists for this module', 'error')
             return redirect(url_for('admin_submodules'))
-        
+
         # Create new submodule
         submodule = Submodule(
             module_id=module.id,
@@ -1073,23 +1073,23 @@ def admin_create_submodule():
             slug=form.slug.data,
             order=form.order.data
         )
-        
+
         db.session.add(submodule)
         db.session.commit()
-        
+
         # Save content to file
         submodule_file = f"content/modules/{module.slug}/{form.slug.data}.md"
         os.makedirs(os.path.dirname(submodule_file), exist_ok=True)
-        
+
         with open(submodule_file, 'w') as f:
             f.write(form.content.data)
-        
+
         flash(f'Submodule "{submodule.title}" created successfully', 'success')
     else:
         for field, errors in form.errors.items():
             for error in errors:
                 flash(f"{field}: {error}", 'error')
-    
+
     return redirect(url_for('admin_submodules'))
 
 
@@ -1099,7 +1099,7 @@ def admin_edit_submodule(submodule_id):
     """Edit a submodule"""
     submodule = Submodule.query.get_or_404(submodule_id)
     module = Module.query.get(submodule.module_id)
-    
+
     # Load content from file
     content_file = f"content/modules/{module.slug}/{submodule.slug}.md"
     try:
@@ -1111,20 +1111,20 @@ def admin_edit_submodule(submodule_id):
     except Exception as e:
         logger.error(f"Error loading submodule content: {str(e)}")
         content = ""
-    
+
     if request.method == 'POST':
         # Update submodule fields
         submodule.title = request.form.get('title')
         submodule.order = int(request.form.get('order', 0))
-        
+
         # Save content to file
         with open(content_file, 'w') as f:
             f.write(request.form.get('content', ''))
-        
+
         db.session.commit()
         flash(f'Submodule "{submodule.title}" updated successfully', 'success')
         return redirect(url_for('admin_submodules'))
-    
+
     return render_template('admin/edit_submodule.html', 
                           submodule=submodule,
                           module=module,
@@ -1144,41 +1144,41 @@ def admin_users():
 def admin_user_detail(user_id):
     """Admin user detail view"""
     user = User.query.get_or_404(user_id)
-    
+
     # Get user logs
     logs = UserLog.query.filter_by(user_id=user.id).order_by(UserLog.timestamp.desc()).all()
-    
+
     # Get user payments
     payments = Payment.query.filter_by(user_id=user.id).order_by(Payment.created_at.desc()).all()
-    
+
     # Get module progress
     module_progress = []
     for module in Module.query.order_by(Module.order).all():
         if user.can_access_module(module.slug):
             submodule_count = len(module.submodules)
             completed_count = 0
-            
+
             for submodule in module.submodules:
                 completion = ModuleCompletion.query.filter_by(
                     user_id=user.id, 
                     submodule_id=submodule.id
                 ).first()
-                
+
                 if completion:
                     completed_count += 1
-            
+
             if submodule_count > 0:
                 progress = int((completed_count / submodule_count) * 100)
             else:
                 progress = 0
-            
+
             module_progress.append({
                 'module': module,
                 'progress': progress,
                 'completed': completed_count,
                 'total': submodule_count
             })
-    
+
     return render_template('admin/user_detail.html',
                           user=user,
                           logs=logs,
@@ -1191,27 +1191,27 @@ def admin_user_detail(user_id):
 def admin_update_user(user_id):
     """Update user from admin panel"""
     user = User.query.get_or_404(user_id)
-    
+
     # Update user fields
     if 'role' in request.form:
         user.role = request.form.get('role')
-    
+
     if 'subscription_status' in request.form:
         user.subscription_status = request.form.get('subscription_status')
-    
+
     if 'subscription_type' in request.form:
         user.subscription_type = request.form.get('subscription_type')
-    
+
     if 'subscription_end' in request.form:
         end_date = request.form.get('subscription_end')
         if end_date:
             user.subscription_end = datetime.fromisoformat(end_date)
         else:
             user.subscription_end = None
-    
+
     db.session.add(UserLog(user_id=user.id, action=f"admin updated user profile"))
     db.session.commit()
-    
+
     flash(f'User "{user.username}" updated successfully', 'success')
     return redirect(url_for('admin_user_detail', user_id=user.id))
 
@@ -1246,13 +1246,13 @@ def admin_create_plan():
             duration_days=int(request.form.get('duration_days', 0)) if request.form.get('duration_days') else None,
             is_active=request.form.get('is_active') == 'on'
         )
-        
+
         db.session.add(plan)
         db.session.commit()
-        
+
         flash(f'Plan "{plan.name}" created successfully', 'success')
         return redirect(url_for('admin_plans'))
-    
+
     return render_template('admin/create_plan.html')
 
 
@@ -1261,23 +1261,23 @@ def admin_create_plan():
 def admin_edit_plan(plan_id):
     """Edit a payment plan"""
     plan = PaymentPlan.query.get_or_404(plan_id)
-    
+
     if request.method == 'POST':
         # Update plan
         plan.name = request.form.get('name')
         plan.description = request.form.get('description')
         plan.price_usd = int(float(request.form.get('price_usd', 0)) * 100)  # Convert to cents
-        
+
         duration_days = request.form.get('duration_days')
         plan.duration_days = int(duration_days) if duration_days else None
-        
+
         plan.is_active = request.form.get('is_active') == 'on'
-        
+
         db.session.commit()
-        
+
         flash(f'Plan "{plan.name}" updated successfully', 'success')
         return redirect(url_for('admin_plans'))
-    
+
     return render_template('admin/edit_plan.html', plan=plan)
 
 
@@ -1301,7 +1301,7 @@ def server_error(e):
 def get_csrf_token():
     if 'user_id' not in session:
         return jsonify(error="Not authenticated"), 401
-    
+
     return jsonify(csrf_token=generate_csrf())
 
 
@@ -1325,11 +1325,11 @@ def format_currency(value):
 def init_db():
     with app.app_context():
         db.create_all()
-        
+
         # Check if we need to create default plans
         if PaymentPlan.query.count() == 0:
             logger.info("Creating default payment plans")
-            
+
             # Create trial plan
             trial_plan = PaymentPlan(
                 name="Free Trial",
@@ -1339,7 +1339,7 @@ def init_db():
                 duration_days=7,
                 is_active=True
             )
-            
+
             # Create monthly plan
             monthly_plan = PaymentPlan(
                 name="Monthly Access",
@@ -1349,7 +1349,7 @@ def init_db():
                 duration_days=30,
                 is_active=True
             )
-            
+
             # Create annual plan
             annual_plan = PaymentPlan(
                 name="Annual Access",
@@ -1359,7 +1359,7 @@ def init_db():
                 duration_days=365,
                 is_active=True
             )
-            
+
             # Create lifetime plan
             lifetime_plan = PaymentPlan(
                 name="Lifetime Access",
@@ -1369,82 +1369,20 @@ def init_db():
                 duration_days=None,  # No expiration
                 is_active=True
             )
-            
+
             db.session.add_all([trial_plan, monthly_plan, annual_plan, lifetime_plan])
             db.session.commit()
             logger.info("Default payment plans created")
 
-
-@app.template_filter('format_currency')
-def format_currency(value):
-    if value is None:
-        return "$0.00"
-    # Convert cents to dollars
-    return "${:.2f}".format(value / 100)
-
-
-# Initialize the database and create an admin user if needed
-def init_db():
-    with app.app_context():
-        db.create_all()
-        
-        # Check if we need to create default plans
-        if PaymentPlan.query.count() == 0:
-            logger.info("Creating default payment plans")
-            
-            # Create trial plan
-            trial_plan = PaymentPlan(
-                name="Free Trial",
-                slug="trial",
-                description="7-day free trial with access to limited content",
-                price_usd=0,
-                duration_days=7,
-                is_active=True
-            )
-            
-            # Create monthly plan
-            monthly_plan = PaymentPlan(
-                name="Monthly Access",
-                slug="monthly",
-                description="Full access to all content for 30 days",
-                price_usd=1999,  # $19.99
-                duration_days=30,
-                is_active=True
-            )
-            
-            # Create annual plan
-            annual_plan = PaymentPlan(
-                name="Annual Access",
-                slug="annual",
-                description="Full access to all content for 12 months",
-                price_usd=9999,  # $99.99
-                duration_days=365,
-                is_active=True
-            )
-            
-            # Create lifetime plan
-            lifetime_plan = PaymentPlan(
-                name="Lifetime Access",
-                slug="lifetime",
-                description="Unlimited access to all current and future content",
-                price_usd=19999,  # $199.99
-                duration_days=None,  # No expiration
-                is_active=True
-            )
-            
-            db.session.add_all([trial_plan, monthly_plan, annual_plan, lifetime_plan])
-            db.session.commit()
-            logger.info("Default payment plans created")
-        
         # Check if we need to create an admin user
         admin = User.query.filter_by(role='admin').first()
         if not admin:
             admin_password = os.getenv('ADMIN_INITIAL_PASSWORD', 'admin123')  # Default admin password
             admin_username = os.getenv('ADMIN_USERNAME', 'admin')
             admin_email = os.getenv('ADMIN_EMAIL', 'admin@blackmoby.com')
-            
+
             logger.info(f"Creating default admin user: {admin_username}")
-            
+
             # Create admin user
             admin = User(
                 username=admin_username,
@@ -1453,16 +1391,16 @@ def init_db():
                 role='admin',
                 is_verified=True
             )
-            
+
             db.session.add(admin)
             db.session.commit()
             logger.info("Default admin user created")
-        
+
         # Create default trial modules if they don't exist
         for slug in DEFAULT_TRIAL_MODULES:
             if not Module.query.filter_by(slug=slug).first():
                 logger.info(f"Creating default module: {slug}")
-                
+
                 if slug == 'getting-started':
                     title = "Getting Started"
                     description = "Learn how to use the platform and get the most out of your learning experience."
@@ -1472,7 +1410,7 @@ def init_db():
                 else:
                     title = slug.replace('-', ' ').title()
                     description = f"Default {title} module."
-                
+
                 module = Module(
                     slug=slug,
                     title=title,
@@ -1480,14 +1418,14 @@ def init_db():
                     trial_accessible=True,
                     order=DEFAULT_TRIAL_MODULES.index(slug)
                 )
-                
+
                 db.session.add(module)
                 db.session.commit()
-                
+
                 # Create directory for module content
                 module_dir = f"content/modules/{module.slug}"
                 os.makedirs(module_dir, exist_ok=True)
-                
+
                 # Add a welcome submodule
                 welcome_submodule = Submodule(
                     module_id=module.id,
@@ -1495,16 +1433,16 @@ def init_db():
                     title=f"Welcome to {title}",
                     order=0
                 )
-                
+
                 db.session.add(welcome_submodule)
                 db.session.commit()
-                
+
                 # Create welcome content file
                 welcome_file = f"{module_dir}/welcome.md"
                 if not os.path.exists(welcome_file):
                     with open(welcome_file, 'w') as f:
                         f.write(f"# Welcome to {title}\n\nThis is the welcome page for the {title} module.\n\n## What You'll Learn\n\n- Point 1\n- Point 2\n- Point 3\n\n## Getting Started\n\nClick the 'Complete' button below when you're ready to move on.")
-                
+
                 logger.info(f"Default module created: {slug}")
 
 
@@ -1550,12 +1488,12 @@ def inject_globals():
 if __name__ == '__main__':
     # Create content directory if it doesn't exist
     os.makedirs('content/modules', exist_ok=True)
-    
+
     # Initialize the database
     init_db()
-    
+
     # Start the server
     port = int(os.getenv('PORT', 5000))
     debug = os.getenv('FLASK_ENV', 'production') == 'development'
-    
+
     app.run(host='0.0.0.0', port=port, debug=debug)
