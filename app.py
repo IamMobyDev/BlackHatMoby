@@ -1,6 +1,7 @@
 
 from flask import Flask, render_template, redirect, url_for, request, session, abort, flash
 from dotenv import load_dotenv
+import logging
 from datetime import datetime, timedelta
 import os
 from werkzeug.security import generate_password_hash
