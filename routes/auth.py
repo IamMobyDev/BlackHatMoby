@@ -29,8 +29,6 @@ def generate_verification_token():
 @limiter.limit("5 per minute")
 def login():
     """User login page"""
-    if "user_id" in session:
-        return redirect(url_for("modules.modules_list"))
 
     form = LoginForm()
     if form.validate_on_submit():
@@ -76,8 +74,6 @@ def logout():
 @limiter.limit("5 per minute")
 def register():
     """User registration page"""
-    if "user_id" in session:
-        return redirect(url_for("modules.modules_list"))
 
     form = RegistrationForm()
     if form.validate_on_submit():
