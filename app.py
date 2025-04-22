@@ -20,7 +20,6 @@ from flask_wtf.csrf import CSRFProtect, generate_csrf
 from wtforms import StringField, TextAreaField, SubmitField, PasswordField, BooleanField, SelectField, IntegerField
 from wtforms.validators import DataRequired, Regexp, Email, Length, EqualTo, ValidationError
 from models import db, User, Module, Submodule, ModuleCompletion, UserLog, PaymentPlan, Payment, EmailLog
-import functools
 from flask_mail import Mail, Message
 import threading
 
@@ -297,7 +296,12 @@ def create_module():
 @admin_required
 def dashboard():
     user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for('login'))
+        
     user = User.query.get(user_id)
+    if not user or user.role != 'admin':
+        return redirect(url_for('login'))
 
     modules = {}
     base_path = "modules_data"
