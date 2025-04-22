@@ -3,6 +3,20 @@ import functools
 import markdown
 import os
 import re
+
+def admin_required(view):
+    """Decorator to require admin rights for a route"""
+    @functools.wraps(view)
+    def wrapped_view(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login', next=request.path))
+            
+        user = User.query.get(session['user_id'])
+        if not user or user.role != 'admin':
+            abort(403)
+            
+        return view(*args, **kwargs)
+    return wrapped_view
 from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
