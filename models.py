@@ -15,7 +15,7 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
     subscription = db.relationship('Subscription', backref='user', uselist=False)
-    progress = db.relationship('ModuleProgress', backref='user')
+    progress = db.relationship('ModuleCompletion', backref='user')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -49,6 +49,7 @@ class Subscription(db.Model):
 class Module(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
+    slug = db.Column(db.String(200), unique=True, nullable=False)
     description = db.Column(db.Text)
     order = db.Column(db.Integer, default=0)
     trial_accessible = db.Column(db.Boolean, default=False)
@@ -63,12 +64,17 @@ class Submodule(db.Model):
     content = db.Column(db.Text)
     order = db.Column(db.Integer, default=0)
 
-class ModuleProgress(db.Model):
+class ModuleCompletion(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    module_id = db.Column(db.Integer, db.ForeignKey('module.id'), nullable=False)
     submodule_id = db.Column(db.Integer, db.ForeignKey('submodule.id'), nullable=False)
     completed_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class UserLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    action = db.Column(db.String(200), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Payment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -78,3 +84,10 @@ class Payment(db.Model):
     status = db.Column(db.String(20), default='pending')
     payment_date = db.Column(db.DateTime, default=datetime.utcnow)
     transaction_id = db.Column(db.String(100), unique=True)
+
+class EmailLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    email_type = db.Column(db.String(50), nullable=False)
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default='sent')
