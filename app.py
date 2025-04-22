@@ -5,7 +5,7 @@ import os
 from datetime import timedelta
 from werkzeug.security import generate_password_hash
 from extensions import db, csrf, limiter, mail
-from models import User
+from models import User, ModuleCompletion, UserLog, Payment, PaymentPlan, EmailLog, Module, Submodule
 
 load_dotenv()
 app = Flask(__name__)
@@ -39,6 +39,11 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(modules_bp)
 app.register_blueprint(main_bp)
 
+# Create database tables before first request
+@app.before_first_request
+def create_tables():
+    db.create_all()
+
 if __name__ == '__main__':
     with app.app_context():
         # Create all database tables
@@ -51,7 +56,8 @@ if __name__ == '__main__':
                 email='admin@example.com',
                 password_hash=generate_password_hash('adminpass123'),
                 role='admin',
-                paid=True
+                paid=True,
+                is_verified=True
             )
             db.session.add(admin_user)
             db.session.commit()
