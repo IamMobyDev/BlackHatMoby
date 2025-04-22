@@ -110,7 +110,7 @@ def create_module_submodule(module_id):
         return redirect(url_for("admin.dashboard"))
     return render_template("admin_create_module.html", module=module, is_submodule=True)
 
-@admin_bp.route("/modules/<module>/<slug>/delete", methods=["POST"])
+@admin_bp.route("/delete-module/<module>/<slug>", methods=["POST"])
 @admin_required
 def delete_module(module, slug):
     path = f"modules_data/{module}/{slug}.md"
