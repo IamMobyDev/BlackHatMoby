@@ -34,10 +34,20 @@ def dashboard():
         Module=Module
     )
 
+@admin_bp.route("/modules")
+@admin_required
+def modules():
+    """Admin module management"""
+    modules = Module.query.order_by(Module.order).all()
+    form = CreateModuleForm()
+    return render_template("admin/modules.html", modules=modules, form=form)
+
 @admin_bp.route("/modules/create", methods=["GET", "POST"])
 @admin_required
 def create_module():
+    """Create a new module"""
     if request.method == "POST":
+        # Create new module
         module = Module(
             title=request.form.get("title"),
             slug=request.form.get("slug"),
@@ -46,7 +56,8 @@ def create_module():
         )
         db.session.add(module)
         db.session.commit()
-        flash("Module created successfully!", "success")
+
+        flash(f'Module "{module.title}" created successfully', "success")
         return redirect(url_for("admin.dashboard"))
     return render_template("admin_create_module.html")
 
@@ -89,53 +100,6 @@ def delete_submodule(submodule_id):
     flash("Submodule deleted successfully!", "success")
     return redirect(url_for("admin.dashboard"))
 
-
-@admin_bp.route("/modules")
-@admin_required
-def modules():
-    """Admin module management"""
-    modules = Module.query.order_by(Module.order).all()
-    form = CreateModuleForm()
-
-    return render_template("admin/modules.html", modules=modules, form=form)
-
-
-@admin_bp.route("/modules/create", methods=["POST"])
-@admin_required
-def create_module():
-    """Create a new module"""
-    form = CreateModuleForm()
-
-    if form.validate_on_submit():
-        # Check if module with this slug already exists
-        existing = Module.query.filter_by(slug=form.slug.data).first()
-        if existing:
-            flash("A module with this slug already exists", "error")
-            return redirect(url_for("admin.modules"))
-
-        # Create new module
-        module = Module(
-            title=form.title.data,
-            slug=form.slug.data,
-            description=form.description.data,
-            order=form.order.data,
-            trial_accessible=form.trial_accessible.data,
-        )
-
-        db.session.add(module)
-        db.session.commit()
-
-        # Create directory for module content if it doesn't exist
-        module_dir = f"content/modules/{module.slug}"
-        os.makedirs(module_dir, exist_ok=True)
-
-        flash(f'Module "{module.title}" created successfully', "success")
-    else:
-        for field, errors in form.errors.items():
-            for error in errors:
-                flash(f"{field}: {error}", "error")
-
-    return redirect(url_for("admin.modules"))
 
 
 @admin_bp.route("/modules/<int:module_id>/edit", methods=["GET", "POST"])
