@@ -25,13 +25,27 @@ import threading
 
 app = Flask(__name__)
 load_dotenv()
+
+# Configure Flask app
 app.config.update(
     SQLALCHEMY_DATABASE_URI='sqlite:///instance/app.db',
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
     SECRET_KEY=os.getenv('SECRET_KEY', 'dev_secret_key'),
     WTF_CSRF_SECRET_KEY=os.getenv('WTF_CSRF_SECRET_KEY', 'dev_csrf_key'),
-    PERMANENT_SESSION_LIFETIME=timedelta(minutes=30)
+    PERMANENT_SESSION_LIFETIME=timedelta(minutes=30),
+    MAIL_SERVER=os.getenv('MAIL_SERVER', 'smtp.gmail.com'),
+    MAIL_PORT=int(os.getenv('MAIL_PORT', 587)),
+    MAIL_USE_TLS=os.getenv('MAIL_USE_TLS', True),
+    MAIL_USERNAME=os.getenv('MAIL_USERNAME'),
+    MAIL_PASSWORD=os.getenv('MAIL_PASSWORD'),
+    MAIL_DEFAULT_SENDER=os.getenv('MAIL_DEFAULT_SENDER')
 )
+
+# Initialize extensions
+db.init_app(app)
+csrf.init_app(app)
+mail.init_app(app)
+
 limiter = Limiter(
     key_func=get_remote_address,
     app=app,
@@ -40,55 +54,6 @@ limiter = Limiter(
 csrf = CSRFProtect(app)
 mail = Mail(app)
 db.init_app(app)
-
-# Initialize database and create default plans
-def init_db():
-    with app.app_context():
-        db.create_all()
-        
-        # Check if we need to create default plans
-        if PaymentPlan.query.count() == 0:
-            # Create default plans
-            trial_plan = PaymentPlan(
-                name="Free Trial",
-                slug="trial",
-                description="7-day free trial with access to limited content",
-                price_usd=0,
-                duration_days=7,
-                is_active=True
-            )
-            
-            monthly_plan = PaymentPlan(
-                name="Monthly Access",
-                slug="monthly", 
-                description="Full access to all content for 30 days",
-                price_usd=1999,  # $19.99
-                duration_days=30,
-                is_active=True
-            )
-            
-            annual_plan = PaymentPlan(
-                name="Annual Access",
-                slug="annual",
-                description="Full access to all content for 12 months", 
-                price_usd=9999,  # $99.99
-                duration_days=365,
-                is_active=True
-            )
-            
-            lifetime_plan = PaymentPlan(
-                name="Lifetime Access",
-                slug="lifetime",
-                description="Unlimited access to all current and future content",
-                price_usd=19999,  # $199.99
-                duration_days=None,
-                is_active=True
-            )
-            
-            db.session.add_all([trial_plan, monthly_plan, annual_plan, lifetime_plan])
-            db.session.commit()
-
-init_db()
 
 # Authentication decorator
 def auth_required(f):
@@ -134,8 +99,7 @@ payment_logger.addHandler(handler)
 PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY')
 
 # Import Subscription model from models
-from models import Subscription
-
+from models import User, Module, Submodule, ModuleCompletion, UserLog, Payment, PaymentPlan, Subscription, EmailLog
 
 def get_csrf_token():
     if 'user_id' not in session:
