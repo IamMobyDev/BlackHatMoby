@@ -61,9 +61,9 @@ def create_module():
         return redirect(url_for("admin.dashboard"))
     return render_template("admin_create_module.html")
 
-@admin_bp.route("/modules/<int:module_id>/edit", methods=["GET", "POST"])
+@admin_bp.route("/modules/<int:module_id>/edit-basic", methods=["GET", "POST"])
 @admin_required
-def edit_module(module_id):
+def edit_module_basic(module_id):
     module = Module.query.get_or_404(module_id)
     if request.method == "POST":
         module.title = request.form.get("title")
