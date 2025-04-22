@@ -17,7 +17,7 @@
     
     <h2>Admin Dashboard</h2>
     <p class="create-module">
-      <a href="{{ url_for('admin.create_module') }}" class="btn btn-primary">
+      <a href="{{ url_for('create_module') }}" class="btn btn-primary">
         <strong>➕ Create New Submodule</strong>
       </a>
     </p>
@@ -37,7 +37,7 @@
               <li>
                 <span class="module-name">{{ module.filename }}</span>
                 <div class="action-buttons">
-                  <a href="{{ url_for('admin.edit_module', module=module.module, slug=module.slug) }}" class="btn btn-edit">Edit</a>
+                  <a href="{{ url_for('edit_module', module=module.module, slug=module.slug) }}" class="btn btn-edit">Edit</a>
                   <form method="POST" action="{{ url_for('delete_module', module=module.module, slug=module.slug) }}" style="display:inline;" onsubmit="return confirm('Delete {{ module.slug }}?');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-delete">Delete</button>
