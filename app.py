@@ -1,4 +1,5 @@
-from flask import Flask, render_template, redirect, url_for, request, session, abort, flash, jsonify
+
+from flask import Flask, render_template, redirect, url_for, request, session, abort
 import markdown
 import os
 import re
@@ -6,30 +7,66 @@ import json
 import time
 import requests
 import logging
-import uuid
 from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import timedelta, datetime
 from flask_wtf import FlaskForm
-from flask_wtf.csrf import CSRFProtect, generate_csrf
-from wtforms import StringField, TextAreaField, SubmitField, PasswordField, BooleanField, SelectField, IntegerField
-from wtforms.validators import DataRequired, Regexp, Email, Length, EqualTo, ValidationError
-from models import db, User, Module, Submodule, ModuleCompletion, UserLog, PaymentPlan, Payment, EmailLog
+from flask_wtf.csrf import CSRFProtect
+from models import db, User, ModuleCompletion, UserLog
 
 # Import utility functions
 from utils.decorators import login_required, admin_required, subscription_required
-from extensions import limiter, csrf
 from utils.email import send_email
-from utils.payments import verify_paystack_signature, get_readable_amount, generate_verification_token
+from extensions import limiter, csrf, mail, db
 
-# Or alternatively, import from utils directly if you've set up __init__.py correctly:
-# from utils import login_required, admin_required, subscription_required, send_email
-# from utils import verify_paystack_signature, get_readable_amount, generate_verification_token
+load_dotenv()
+app = Flask(__name__)
+
+# Database setup
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blackmoby.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Secrets and CSRF
+app.secret_key = os.getenv('SECRET_KEY')
+app.config['WTF_CSRF_SECRET_KEY'] = os.getenv('WTF_CSRF_SECRET_KEY')
+app.permanent_session_lifetime = timedelta(minutes=30)
+
+# Initialize extensions
+db.init_app(app)
+csrf.init_app(app)
+limiter.init_app(app)
+mail.init_app(app)
+
+# Import routes after app is created to avoid circular imports
 from routes.admin import admin_bp
 from routes.payment import payment_bp
+from routes.auth import auth_bp
+from routes.modules import modules_bp
+from routes.main import main_bp
 
 # Register blueprints
 app.register_blueprint(admin_bp)
 app.register_blueprint(payment_bp)
+app.register_blueprint(auth_bp)
+app.register_blueprint(modules_bp)
+app.register_blueprint(main_bp)
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+
+        if not User.query.filter_by(username='admin').first():
+            admin_user = User(
+                username='admin',
+                email='admin@example.com',
+                password_hash=generate_password_hash('adminpass123'),
+                role='admin',
+                paid=True
+            )
+            db.session.add(admin_user)
+            db.session.commit()
+            print("✅ Admin user created: admin / adminpass123")
+
+    app.run(debug=True, host='0.0.0.0', port=3000)
