@@ -40,6 +40,13 @@ def index():
 @app.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
 def login():
+    # If already logged in, redirect appropriately
+    if 'user_id' in session:
+        user = User.query.get(session['user_id'])
+        if user and user.role == 'admin':
+            return redirect(url_for('dashboard'))
+        return redirect(url_for('modules'))
+
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
@@ -47,14 +54,21 @@ def login():
         user = User.query.filter_by(username=username).first()
 
         if user and check_password_hash(user.password_hash, password):
+            # Clear any existing session data
+            session.clear()
             session.permanent = True
             session["user_id"] = user.id
             session["role"] = user.role
-
+            
+            # Log the login
             db.session.add(UserLog(user_id=user.id, action="logged in"))
             db.session.commit()
 
-            return redirect(url_for("dashboard" if user.role == "admin" else "modules"))
+            print(f"Logged in user: {username}, Role: {user.role}, ID: {user.id}")  # Debug print
+            
+            if user.role == 'admin':
+                return redirect(url_for('dashboard'))
+            return redirect(url_for('modules'))
 
         return render_template("login.html", error="Invalid credentials")
 
@@ -261,10 +275,16 @@ def create_module():
 ## Dashboard
 @app.route('/dashboard')
 def dashboard():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+        
     user_id = session.get("user_id")
     user = User.query.get(user_id)
+    
+    print(f"Dashboard access - User ID: {user_id}, Role: {user.role if user else 'None'}")  # Debug print
+    
     if not user or user.role != 'admin':
-        abort(403)
+        return redirect(url_for('login'))
 
     modules = {}
     base_path = "modules_data"
