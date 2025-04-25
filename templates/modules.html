@@ -357,7 +357,7 @@
             <ul class="modules-list">
                 {% for module in modules %}
                 <li class="module-item {% if module.completed %}completed{% else %}in-progress{% endif %}">
-                    <a href="{{ url_for('module', slug=module.slug) }}" class="module-link">{{ module.title }}</a>
+                    <a href="{{ url_for('view_module', module=module.slug) }}" class="module-link">{{ module.title }}</a>
                     <span class="status-badge {% if module.completed %}completed{% else %}in-progress{% endif %}">
                         {% if module.completed %}Completed{% else %}In Progress{% endif %}
                     </span>
