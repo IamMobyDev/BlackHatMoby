@@ -72,18 +72,22 @@ def login():
 
 
 # Add this code temporarily at the start of your app.py to check admin existence
-@app.before_first_request
-def check_admin():
+def init_app():
     with app.app_context():
+        db.create_all()
         admin = User.query.filter_by(username='admin').first()
-        if admin:
-            print(f"Admin exists: id={admin.id}, role={admin.role}")
-            # Optional: reset admin password
-            admin.password_hash = generate_password_hash('adminpass123')
+        if not admin:
+            admin_user = User(
+                username='admin',
+                email='admin@example.com',
+                password_hash=generate_password_hash('adminpass123'),
+                role='admin'
+            )
+            db.session.add(admin_user)
             db.session.commit()
-            print("Admin password reset")
+            print("✅ Admin user created: admin / adminpass123")
         else:
-            print("Admin user does not exist!")
+            print("Admin user already exists")
 
 
 
