@@ -43,27 +43,19 @@ def login():
         username = request.form["username"]
         password = request.form["password"]
         
-        print(f"Login attempt: {username}")
-
         user = User.query.filter_by(username=username).first()
         
-        print(f"User found: {user is not None}")
-        if user:
-            password_check = check_password_hash(user.password_hash, password)
-            print(f"Password check: {password_check}")
-            print(f"User role: {user.role}")
-
-        if user and check_password_hash(user.password_hash, password):
+        if user and user.check_password(password):
             session.permanent = True
             session["user_id"] = user.id
             session["role"] = user.role
             
-            print(f"Session set: user_id={session.get('user_id')}, role={session.get('role')}")
-
             db.session.add(UserLog(user_id=user.id, action="logged in"))
             db.session.commit()
-
-            return redirect(url_for("dashboard" if user.role == "admin" else "modules"))
+            
+            if user.role == "admin":
+                return redirect(url_for("dashboard"))
+            return redirect(url_for("modules"))
 
         return render_template("login.html", error="Invalid credentials")
 
@@ -78,14 +70,17 @@ def init_app():
             admin_user = User(
                 username='admin',
                 email='admin@example.com',
-                password_hash=generate_password_hash('adminpass123'),
                 role='admin'
             )
+            admin_user.set_password('adminpass123')
             db.session.add(admin_user)
             db.session.commit()
             print("✅ Admin user created: admin / adminpass123")
         else:
-            print("Admin user already exists")
+            # Reset admin password
+            admin.set_password('adminpass123')
+            db.session.commit()
+            print("Admin password reset to: adminpass123")
 
 
 
