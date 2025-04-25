@@ -42,11 +42,11 @@ def login():
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
+        
+        print(f"Login attempt: {username}")
 
         user = User.query.filter_by(username=username).first()
-
-        # Add debug print statements
-        print(f"Login attempt: {username}")
+        
         print(f"User found: {user is not None}")
         if user:
             password_check = check_password_hash(user.password_hash, password)
@@ -57,8 +57,7 @@ def login():
             session.permanent = True
             session["user_id"] = user.id
             session["role"] = user.role
-
-            # Debug print session
+            
             print(f"Session set: user_id={session.get('user_id')}, role={session.get('role')}")
 
             db.session.add(UserLog(user_id=user.id, action="logged in"))
@@ -69,7 +68,6 @@ def login():
         return render_template("login.html", error="Invalid credentials")
 
     return render_template("login.html")
-
 
 # Add this code temporarily at the start of your app.py to check admin existence
 def init_app():
