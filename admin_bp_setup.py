@@ -564,6 +564,4 @@ def stats():
         stats_data['total_modules'] = module_count
         stats_data['total_submodules'] = submodule_count
 
-    return render_template('admin/stats.html', stats=stats_data).query.filter_by(slug=module).first()
-            if not module_obj:
-                module_obj = Module
+    return render_template('admin/stats.html', stats=stats_data)
