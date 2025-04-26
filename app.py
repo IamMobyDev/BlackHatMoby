@@ -1,17 +1,33 @@
-from flask import Flask, render_template, redirect, url_for, request, session, abort
+from flask import Flask, render_template, redirect, url_for, request, session, abort, flash, send_from_directory
 import markdown
 import os
+import re
+import json
 import time
+import hmac
+import hashlib
+import requests
+import logging
 from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import timedelta
+from datetime import timedelta, datetime
 from flask_wtf import FlaskForm
-from flask_wtf.csrf import CSRFProtect
-from wtforms import StringField, TextAreaField, SubmitField
+from flask_wtf.csrf import CSRFProtect, generate_csrf
+from wtforms import StringField, TextAreaField, SubmitField, PasswordField
 from wtforms.validators import DataRequired, Regexp
-from models import db, User, ModuleCompletion, UserLog
+from models import db, User, ModuleCompletion, UserLog, Subscription, Module, Submodule, PaymentPlan
+from werkzeug.utils import secure_filename
+from functools import wraps
+
+# Set up logging
+logging.basicConfig(
+    filename='app.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('blackmoby')
 
 load_dotenv()
 app = Flask(__name__)
@@ -22,14 +38,30 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 # Secrets and CSRF
-app.secret_key = os.getenv('SECRET_KEY')
-app.config['WTF_CSRF_SECRET_KEY'] = os.getenv('WTF_CSRF_SECRET_KEY')
+app.secret_key = os.getenv('SECRET_KEY', 'development-secret-key')
+app.config['WTF_CSRF_SECRET_KEY'] = os.getenv('WTF_CSRF_SECRET_KEY', 'csrf-secret-key')
 app.permanent_session_lifetime = timedelta(minutes=30)
 
 # Rate limiting & CSRF protection
 limiter = Limiter(get_remote_address, app=app)
 csrf = CSRFProtect(app)
 
+# Admin required decorator
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user_id = session.get("user_id")
+        user = User.query.get(user_id)
+        if not user or user.role != 'admin':
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
+
+# We're now using a local import - this will use the admin_bp from the admin.py file in the current directory
+from admin_bp_setup import admin_bp
+
+# Register blueprints - register only once!
+app.register_blueprint(admin_bp)
 
 @app.route('/')
 def index():
@@ -42,47 +74,22 @@ def login():
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
-        
+
         user = User.query.filter_by(username=username).first()
-        
-        if user and user.check_password(password):
+
+        if user and check_password_hash(user.password_hash, password):
             session.permanent = True
             session["user_id"] = user.id
             session["role"] = user.role
-            
+
             db.session.add(UserLog(user_id=user.id, action="logged in"))
             db.session.commit()
-            
-            if user.role == "admin":
-                return redirect(url_for("dashboard"))
-            return redirect(url_for("modules"))
+
+            return redirect(url_for("admin.dashboard" if user.role == "admin" else "modules"))
 
         return render_template("login.html", error="Invalid credentials")
 
     return render_template("login.html")
-
-# Add this code temporarily at the start of your app.py to check admin existence
-def init_app():
-    with app.app_context():
-        db.create_all()
-        admin = User.query.filter_by(username='admin').first()
-        if not admin:
-            admin_user = User(
-                username='admin',
-                email='admin@example.com',
-                role='admin'
-            )
-            admin_user.set_password('adminpass123')
-            db.session.add(admin_user)
-            db.session.commit()
-            print("✅ Admin user created: admin / adminpass123")
-        else:
-            # Reset admin password
-            admin.set_password('adminpass123')
-            db.session.commit()
-            print("Admin password reset to: adminpass123")
-
-
 
 @app.route('/logout')
 def logout():
@@ -94,7 +101,6 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-
 @app.route('/register', methods=['GET', 'POST'])
 @limiter.limit("5 per minute")
 def register():
@@ -105,306 +111,40 @@ def register():
         confirm_password = request.form['confirm_password']
 
         if User.query.filter_by(username=username).first():
-            return render_template("register.html",
-                                   error="Username already exists.")
+            return render_template("register.html", error="Username already exists.")
 
         if email and User.query.filter_by(email=email).first():
-            return render_template("register.html",
-                                   error="Email already in use.")
+            return render_template("register.html", error="Email already in use.")
 
         if password != confirm_password:
-            return render_template("register.html",
-                                   error="Passwords do not match.")
+            return render_template("register.html", error="Passwords do not match.")
 
-        new_user = User(username=username,
-                        email=email,
-                        password_hash=generate_password_hash(password),
-                        role='user')
+        new_user = User(
+            username=username,
+            email=email,
+            password_hash=generate_password_hash(password),
+            role='user'
+        )
         db.session.add(new_user)
         db.session.commit()
+
+        # Create a trial subscription
+        trial_sub = Subscription(
+            user_id=new_user.id,
+            plan_type='trial',
+            start_date=datetime.utcnow(),
+            end_date=datetime.utcnow() + timedelta(days=14),
+            active=True
+        )
+        db.session.add(trial_sub)
 
         db.session.add(UserLog(user_id=new_user.id, action="registered"))
         db.session.commit()
 
-        return redirect(
-            url_for("login", msg="Registration successful. Please log in."))
+        flash("Registration successful. Please log in.", "success")
+        return redirect(url_for("login"))
 
     return render_template("register.html")
-
-
-class CreateModuleForm(FlaskForm):
-    module = StringField(
-        'Module (Folder)',
-        validators=[
-            DataRequired(),
-            Regexp(
-                r'^[A-Za-z0-9\- ]+$',
-                message="Only letters, numbers, spaces, and dashes allowed.")
-        ])
-    slug = StringField(
-        'Submodule Slug (Filename)',
-        validators=[
-            DataRequired(),
-            Regexp(r'^[A-Za-z0-9\-]+$',
-                   message="Only letters, numbers, and dashes allowed.")
-        ])
-    title = StringField('Title', validators=[DataRequired()])
-    content = TextAreaField('Content (Markdown)', validators=[DataRequired()])
-    submit = SubmitField('Create Module')
-
-
-@app.route('/modules')
-def user_modules():
-    user_id = session.get("user_id")
-    user = User.query.get(user_id)
-    if not user:
-        return redirect(url_for('login'))
-
-    base_path = "modules_data"
-    module_folders = []
-    if os.path.exists(base_path):
-        for folder in os.listdir(base_path):
-            folder_path = os.path.join(base_path, folder)
-            if os.path.isdir(folder_path):
-                module_folders.append(folder)
-
-    return render_template("user_modules.html",
-                           modules=module_folders,
-                           user=user)
-
-
-@app.route('/module/<module>')
-def view_module(module):
-    user_id = session.get("user_id")
-    user = User.query.get(user_id)
-    if not user:
-        return redirect(url_for('login'))
-
-    folder_path = os.path.join("modules_data", module)
-    submodules = []
-    content = ""
-    selected_slug = None
-    selected_slug_idx = None  # Initialize the variable
-
-    if os.path.isdir(folder_path):
-        for filename in sorted(os.listdir(folder_path)):
-            if filename.endswith(".md"):
-                slug = filename.replace(".md", "")
-                path = os.path.join(folder_path, filename)
-                title = slug
-                try:
-                    with open(path, 'r') as f:
-                        first_line = f.readline().strip()
-                        if first_line.startswith("# "):
-                            title = first_line[2:]
-                except:
-                    pass
-                submodules.append({"slug": slug, "title": title})
-
-        if submodules:
-            selected_slug = submodules[0]['slug']
-            selected_slug_idx = 0  # Set to first item index
-            filepath = os.path.join(folder_path, f"{selected_slug}.md")
-            if os.path.exists(filepath):
-                with open(filepath, 'r') as file:
-                    raw_md = file.read()
-                    content = markdown.markdown(raw_md)
-
-    return render_template(
-        "module_viewer.html",
-        module=module,
-        submodules=submodules,
-        content=content,
-        selected_slug=selected_slug,
-        selected_slug_idx=selected_slug_idx,  # Add this line
-        user=user)
-
-
-## Admin routes
-
-
-## Create Module
-@app.route('/create-module', methods=['GET', 'POST'])
-def create_module():
-    user_id = session.get("user_id")
-    user = User.query.get(user_id)
-    if not user or user.role != 'admin':
-        abort(403)
-
-    form = CreateModuleForm()
-
-    # Get list of existing modules
-    existing_modules = []
-    base_path = "modules_data"
-    if os.path.exists(base_path):
-        for folder in os.listdir(base_path):
-            folder_path = os.path.join(base_path, folder)
-            if os.path.isdir(folder_path):
-                existing_modules.append(folder)
-
-    if request.method == 'POST':  # Changed to check for POST method instead of form validation
-        module_option = request.form.get('module_option', 'new')
-
-        # Handle module selection based on radio button choice
-        if module_option == 'new':
-            new_module_name = request.form.get('new_module', '').strip()
-            if not new_module_name:
-                return render_template(
-                    'admin_create_module.html',
-                    form=form,
-                    existing_modules=existing_modules,
-                    error=
-                    "New module name is required when creating a new module.")
-
-            module = new_module_name.lower().replace(' ', '-')
-            msg_prefix = f"Module folder '{module}' created! "
-        else:  # existing module selected
-            module = request.form.get('existing_module', '').strip()
-            if not module:
-                return render_template(
-                    'admin_create_module.html',
-                    form=form,
-                    existing_modules=existing_modules,
-                    error="Please select an existing module.")
-            msg_prefix = ""
-
-        slug = request.form.get(
-            'slug',
-            '').strip().lower()  # Get values directly from request.form
-        title = request.form.get('title', '').strip()
-        content = request.form.get('content', '')
-
-        # Validate required fields
-        if not slug or not title or not content:
-            return render_template('admin_create_module.html',
-                                   form=form,
-                                   existing_modules=existing_modules,
-                                   error="All fields are required.")
-
-        folder_path = f"modules_data/{module}"
-        os.makedirs(folder_path, exist_ok=True)
-
-        filepath = f"{folder_path}/{slug}.md"
-        if os.path.exists(filepath):
-            return render_template(
-                'admin_create_module.html',
-                form=form,
-                existing_modules=existing_modules,
-                error=f"Submodule '{slug}' already exists in module '{module}'."
-            )
-
-        uploaded_files = request.files.getlist("images")
-        os.makedirs("static/uploads", exist_ok=True)
-
-        for uploaded_file in uploaded_files:
-            if uploaded_file and uploaded_file.filename != "":
-                upload_path = os.path.join("static/uploads",
-                                           uploaded_file.filename)
-                uploaded_file.save(upload_path)
-                content += f"\n\n![image](/static/uploads/{uploaded_file.filename})"
-
-        with open(filepath, 'w') as f:
-            f.write(f"# {title}\n\n" + content)
-
-        # Redirect to dashboard instead of rendering template
-        return redirect(
-            url_for(
-                'dashboard',
-                msg=f"{msg_prefix}Submodule '{slug}' created under '{module}'!"
-            ))
-
-    return render_template('admin_create_module.html',
-                           form=form,
-                           existing_modules=existing_modules)
-
-
-## Dashboard
-@app.route('/dashboard')
-def dashboard():
-    user_id = session.get("user_id")
-    print(f"Dashboard accessed: user_id in session = {user_id}")
-    
-    user = User.query.get(user_id)
-    print(f"User retrieved: {user is not None}")
-    if user:
-        print(f"User role: {user.role}")
-    
-    if not user or user.role != 'admin':
-        print("Access denied - not admin")
-        abort(403)
-    # Rest of your dashboard code
-
-    modules = {}
-    base_path = "modules_data"
-    if os.path.exists(base_path):
-        for folder in os.listdir(base_path):
-            folder_path = os.path.join(base_path, folder)
-            if os.path.isdir(folder_path):
-                submodules = []
-                for filename in os.listdir(folder_path):
-                    if filename.endswith(".md"):
-                        slug = filename.replace(".md", "")
-                        submodules.append({
-                            "slug": slug,
-                            "filename": filename,
-                            "module": folder
-                        })
-                modules[folder] = submodules
-
-    msg = request.args.get("msg")
-    error = request.args.get("error")
-    return render_template("admin_dashboard.html",
-                           modules=modules,
-                           msg=msg,
-                           error=error)
-
-
-@app.route('/module/<module>/<slug>')
-def view_submodule(module, slug):
-    user_id = session.get("user_id")
-    user = User.query.get(user_id)
-    if not user:
-        return redirect(url_for('login'))
-
-    folder_path = os.path.join("modules_data", module)
-    filepath = os.path.join(folder_path, f"{slug}.md")
-    content = "<h2>404 - Module Not Found</h2>"
-
-    submodules = []
-    if os.path.isdir(folder_path):
-        for filename in sorted(os.listdir(folder_path)):
-            if filename.endswith(".md"):
-                sub_slug = filename.replace(".md", "")
-                sub_title = sub_slug
-                try:
-                    with open(os.path.join(folder_path, filename), 'r') as f:
-                        first_line = f.readline().strip()
-                        if first_line.startswith("# "):
-                            sub_title = first_line[2:]
-                except:
-                    pass
-                submodules.append({"slug": sub_slug, "title": sub_title})
-
-    # Find the index of the current submodule
-    selected_slug_idx = None
-    for i, sub in enumerate(submodules):
-        if sub['slug'] == slug:
-            selected_slug_idx = i
-            break
-
-    if os.path.exists(filepath):
-        with open(filepath, 'r') as file:
-            raw_md = file.read()
-            content = markdown.markdown(raw_md)
-
-    return render_template("module_viewer.html",
-                           module=module,
-                           submodules=submodules,
-                           content=content,
-                           selected_slug=slug,
-                           selected_slug_idx=selected_slug_idx,
-                           user=user)
-
 
 @app.route('/modules')
 def modules():
@@ -432,158 +172,480 @@ def modules():
                                     title = first_line[2:]
                         except:
                             pass
+
+                        # Check completion status
+                        completed = False
+                        try:
+                            # Try to get from database
+                            module_obj = Module.query.filter_by(slug=folder).first()
+                            if module_obj:
+                                submodule = Submodule.query.filter(
+                                    Submodule.module_id == module_obj.id,
+                                    Submodule.title.like(f"%{title}%")
+                                ).first()
+
+                                if submodule:
+                                    completion = ModuleCompletion.query.filter_by(
+                                        user_id=user.id, 
+                                        submodule_id=submodule.id
+                                    ).first()
+
+                                    if completion:
+                                        completed = True
+                        except Exception as e:
+                            logger.error(f"Error checking completion: {str(e)}")
+
                         submodules.append({
                             "slug": slug,
                             "title": title,
-                            "module": folder
+                            "module": folder,
+                            "completed": completed
                         })
                 modules[folder] = submodules
 
-    return render_template("user_modules.html", modules=modules, user=user)
+    return render_template("modules.html", modules=modules, user=user)
 
-
-@app.route('/mark_module/<slug>/<status>')
-def mark_module(slug, status):
+@app.route('/module/<module>')
+def view_module(module):
     user_id = session.get("user_id")
     user = User.query.get(user_id)
     if not user:
         return redirect(url_for('login'))
 
-    completed = (status.lower() == 'complete')
+    folder_path = os.path.join("modules_data", module)
+    submodules = []
+    content = ""
+    selected_slug = None
+    selected_slug_idx = None
 
-    existing = ModuleCompletion.query.filter_by(user_id=user_id,
-                                                module_slug=slug).first()
-    if completed and not existing:
-        db.session.add(ModuleCompletion(user_id=user_id, module_slug=slug))
-        db.session.commit()
-    elif not completed and existing:
-        db.session.delete(existing)
-        db.session.commit()
+    if os.path.isdir(folder_path):
+        for filename in sorted(os.listdir(folder_path)):
+            if filename.endswith(".md"):
+                slug = filename.replace(".md", "")
+                path = os.path.join(folder_path, filename)
+                title = slug
+                try:
+                    with open(path, 'r') as f:
+                        first_line = f.readline().strip()
+                        if first_line.startswith("# "):
+                            title = first_line[2:]
+                except:
+                    pass
 
-    return redirect(url_for('module', slug=slug))
+                # Check completion status
+                completed = False
+                try:
+                    # Try to get from database
+                    module_obj = Module.query.filter_by(slug=module).first()
+                    if module_obj:
+                        submodule = Submodule.query.filter(
+                            Submodule.module_id == module_obj.id,
+                            Submodule.title.like(f"%{title}%")
+                        ).first()
 
+                        if submodule:
+                            completion = ModuleCompletion.query.filter_by(
+                                user_id=user.id, 
+                                submodule_id=submodule.id
+                            ).first()
 
-class CreateModuleForm(FlaskForm):
-    module = StringField(
-        'Module (Folder)',
-        validators=[
-            DataRequired(),
-            Regexp(
-                r'^[A-Za-z0-9\- ]+$',
-                message="Only letters, numbers, spaces, and dashes allowed.")
-        ])
-    slug = StringField(
-        'Submodule Slug (Filename)',
-        validators=[
-            DataRequired(),
-            Regexp(r'^[A-Za-z0-9\-]+$',
-                   message="Only letters, numbers, and dashes allowed.")
-        ])
-    title = StringField('Title', validators=[DataRequired()])
-    content = TextAreaField('Content (Markdown)', validators=[DataRequired()])
-    submit = SubmitField('Create Module')
+                            if completion:
+                                completed = True
+                except Exception as e:
+                    logger.error(f"Error checking completion: {str(e)}")
 
+                submodules.append({
+                    "slug": slug, 
+                    "title": title,
+                    "completed": completed
+                })
 
-class EditModuleForm(FlaskForm):
-    content = TextAreaField('Content', validators=[DataRequired()])
-    submit = SubmitField('Save Changes')
+        if submodules:
+            selected_slug = submodules[0]['slug']
+            selected_slug_idx = 0
+            filepath = os.path.join(folder_path, f"{selected_slug}.md")
+            if os.path.exists(filepath):
+                with open(filepath, 'r') as file:
+                    raw_md = file.read()
+                    content = markdown.markdown(raw_md)
 
+    # Check if module has lab materials
+    has_lab = False
+    lab_file = None
+    try:
+        module_obj = Module.query.filter_by(slug=module).first()
+        if module_obj and module_obj.has_lab:
+            has_lab = True
+            lab_file = module_obj.lab_file
+    except Exception as e:
+        logger.error(f"Error checking lab: {str(e)}")
 
-@app.route('/edit-module/<module>/<slug>', methods=['GET', 'POST'])
-def edit_module(module, slug):
+        # Try fallback to file check
+        lab_dir = "lab_materials"
+        if os.path.exists(lab_dir):
+            lab_path = os.path.join(lab_dir, f"{module}.zip")
+            if os.path.exists(lab_path):
+                has_lab = True
+                lab_file = f"{module}.zip"
+
+    return render_template(
+        "module_viewer.html", 
+        module=module, 
+        submodules=submodules, 
+        content=content, 
+        selected_slug=selected_slug, 
+        selected_slug_idx=selected_slug_idx,
+        user=user,
+        has_lab=has_lab,
+        lab_file=lab_file
+    )
+
+@app.route('/module/<module>/<slug>')
+def view_submodule(module, slug):
     user_id = session.get("user_id")
     user = User.query.get(user_id)
-    if not user or user.role != 'admin':
-        abort(403)
+    if not user:
+        return redirect(url_for('login'))
 
-    path = f"modules_data/{module}/{slug}.md"
-    backup_dir = "module_backups"
-    if not os.path.exists(backup_dir):
-        os.makedirs(backup_dir)
+    folder_path = os.path.join("modules_data", module)
+    filepath = os.path.join(folder_path, f"{slug}.md")
+    content = "<h2>404 - Module Not Found</h2>"
 
-    form = EditModuleForm()
+    submodules = []
+    if os.path.isdir(folder_path):
+        for filename in sorted(os.listdir(folder_path)):
+            if filename.endswith(".md"):
+                sub_slug = filename.replace(".md", "")
+                sub_title = sub_slug
+                try:
+                    with open(os.path.join(folder_path, filename), 'r') as f:
+                        first_line = f.readline().strip()
+                        if first_line.startswith("# "):
+                            sub_title = first_line[2:]
+                except:
+                    pass
 
-    if form.validate_on_submit():
-        new_content = form.content.data
+                # Check completion status
+                completed = False
+                try:
+                    # Try to get from database
+                    module_obj = Module.query.filter_by(slug=module).first()
+                    if module_obj:
+                        submodule = Submodule.query.filter(
+                            Submodule.module_id == module_obj.id,
+                            Submodule.title.like(f"%{sub_title}%")
+                        ).first()
 
-        import time
-        import shutil
-        timestamp = time.strftime("%Y%m%d-%H%M%S")
-        if os.path.exists(path):
-            backup_path = f"{backup_dir}/{module}-{slug}-{timestamp}.md"
-            shutil.copy2(path, backup_path)
+                        if submodule:
+                            completion = ModuleCompletion.query.filter_by(
+                                user_id=user.id, 
+                                submodule_id=submodule.id
+                            ).first()
 
-        uploaded_files = request.files.getlist("images")
-        os.makedirs("static/uploads", exist_ok=True)
+                            if completion:
+                                completed = True
+                except Exception as e:
+                    logger.error(f"Error checking completion: {str(e)}")
 
-        for uploaded_file in uploaded_files:
-            if uploaded_file and uploaded_file.filename != "":
-                upload_path = os.path.join("static/uploads",
-                                           uploaded_file.filename)
-                uploaded_file.save(upload_path)
-                new_content += f"\n\n![image](/static/uploads/{uploaded_file.filename})"
+                submodules.append({
+                    "slug": sub_slug, 
+                    "title": sub_title,
+                    "completed": completed
+                })
 
-        with open(path, 'w') as f:
-            f.write(new_content)
+    # Find the index of the current submodule
+    selected_slug_idx = None
+    for i, sub in enumerate(submodules):
+        if sub['slug'] == slug:
+            selected_slug_idx = i
+            break
 
-        return redirect(
-            url_for('dashboard', msg=f"Submodule '{slug}' updated!"))
+    if os.path.exists(filepath):
+        with open(filepath, 'r') as file:
+            raw_md = file.read()
+            content = markdown.markdown(raw_md)
 
-    if request.method == 'GET' and os.path.exists(path):
-        with open(path, 'r') as f:
-            form.content.data = f.read()
-    else:
-        return redirect(
-            url_for('dashboard', error=f"Submodule '{slug}' not found."))
+            # Record view (for analytics)
+            try:
+                module_obj = Module.query.filter_by(slug=module).first()
+                if module_obj:
+                    submodule = Submodule.query.filter(
+                        Submodule.module_id == module_obj.id,
+                        Submodule.title.like(f"%{slug.replace('-', ' ')}%")
+                    ).first()
 
-    return render_template('edit_module.html', slug=slug, form=form)
+                    if submodule:
+                        db.session.add(UserLog(
+                            user_id=user.id, 
+                            action=f"viewed module {module}/{slug}"
+                        ))
+                        db.session.commit()
+            except Exception as e:
+                logger.error(f"Error recording view: {str(e)}")
 
+    # Check if module has lab materials
+    has_lab = False
+    lab_file = None
+    try:
+        module_obj = Module.query.filter_by(slug=module).first()
+        if module_obj and module_obj.has_lab:
+            has_lab = True
+            lab_file = module_obj.lab_file
+    except Exception as e:
+        logger.error(f"Error checking lab: {str(e)}")
 
-@app.route('/delete-module/<module>/<slug>', methods=['POST'])
-def delete_module(module, slug):
+        # Try fallback to file check
+        lab_dir = "lab_materials"
+        if os.path.exists(lab_dir):
+            lab_path = os.path.join(lab_dir, f"{module}.zip")
+            if os.path.exists(lab_path):
+                has_lab = True
+                lab_file = f"{module}.zip"
+
+    return render_template(
+        "module_viewer.html", 
+        module=module, 
+        submodules=submodules, 
+        content=content, 
+        selected_slug=slug, 
+        selected_slug_idx=selected_slug_idx,
+        user=user,
+        has_lab=has_lab,
+        lab_file=lab_file
+    )
+
+@app.route('/mark-complete/<module>/<slug>', methods=['POST'])
+def mark_complete(module, slug):
     user_id = session.get("user_id")
     user = User.query.get(user_id)
-    if not user or user.role != 'admin':
-        abort(403)
+    if not user:
+        return redirect(url_for('login'))
 
-    path = f"modules_data/{module}/{slug}.md"
-    backup_dir = "module_backups"
-    if not os.path.exists(backup_dir):
-        os.makedirs(backup_dir)
+    try:
+        module_obj = Module.query.filter_by(slug=module).first()
+        if module_obj:
+            submodule = Submodule.query.filter(
+                Submodule.module_id == module_obj.id,
+                Submodule.title.like(f"%{slug.replace('-', ' ')}%")
+            ).first()
 
-    import shutil
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    if os.path.exists(path):
-        backup_path = f"{backup_dir}/{module}-{slug}-{timestamp}.md"
-        shutil.copy2(path, backup_path)
-        os.remove(path)
-        return redirect(
-            url_for(
-                'dashboard',
-                msg=f"Submodule '{slug}' deleted successfully! (Backup created)"
+            if submodule:
+                existing = ModuleCompletion.query.filter_by(
+                    user_id=user.id, 
+                    submodule_id=submodule.id
+                ).first()
+
+                if not existing:
+                    completion = ModuleCompletion(
+                        user_id=user.id,
+                        submodule_id=submodule.id
+                    )
+                    db.session.add(completion)
+                    db.session.add(UserLog(
+                        user_id=user.id, 
+                        action=f"completed module {module}/{slug}"
+                    ))
+                    db.session.commit()
+                    flash("Module marked as complete!", "success")
+    except Exception as e:
+        logger.error(f"Error marking complete: {str(e)}")
+        flash("Error marking module as complete.", "error")
+
+    return redirect(url_for('view_submodule', module=module, slug=slug))
+
+@app.route('/download-lab/<module>', methods=['GET'])
+def download_lab(module):
+    user_id = session.get("user_id")
+    user = User.query.get(user_id)
+    if not user:
+        return redirect(url_for('login'))
+
+    # Check if user has access to labs
+    has_access = False
+    if user.role == 'admin':
+        has_access = True
+    elif user.subscription:
+        has_access = user.subscription.is_active() and user.subscription.plan_type != 'trial'
+
+    if not has_access:
+        flash("You need a paid subscription to access lab materials.", "error")
+        return redirect(url_for('view_module', module=module))
+
+    # Get lab file
+    lab_file = None
+    try:
+        module_obj = Module.query.filter_by(slug=module).first()
+        if module_obj and module_obj.has_lab:
+            lab_file = module_obj.lab_file
+    except Exception as e:
+        logger.error(f"Error finding lab: {str(e)}")
+
+    if not lab_file:
+        # Try fallback to file check
+        lab_dir = "lab_materials"
+        lab_path = os.path.join(lab_dir, f"{module}.zip")
+        if os.path.exists(lab_path):
+            lab_file = f"{module}.zip"
+
+    if lab_file:
+        # Record download
+        try:
+            db.session.add(UserLog(
+                user_id=user.id, 
+                action=f"downloaded lab for {module}"
             ))
-    else:
-        return redirect(
-            url_for('dashboard', error=f"Submodule '{slug}' not found."))
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"Error recording download: {str(e)}")
 
+        return send_from_directory(
+            'lab_materials', 
+            lab_file, 
+            as_attachment=True
+        )
 
-if __name__ == '__main__':
+    flash("Lab materials not found.", "error")
+    return redirect(url_for('view_module', module=module))
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('errors/404.html'), 404
+
+@app.errorhandler(403)
+def forbidden(e):
+    return render_template('errors/403.html'), 403
+
+@app.errorhandler(500)
+def server_error(e):
+    logger.error(f"Server error: {str(e)}")
+    return render_template('errors/500.html'), 500
+
+# Helper functions for application initialization
+def init_app():
+    """Initialize the application with default data"""
     with app.app_context():
         db.create_all()
+        create_default_payment_plans()
+        create_default_admin()
+        create_default_module("getting-started", "Getting Started")
+        create_default_module("introduction", "Introduction to Black Mink Labs")
 
-        # Check if admin exists and create if not
-        admin_exists = User.query.filter_by(username='admin').first()
-        if not admin_exists:
-            admin_user = User(
-                username='admin',
-                email='admin@example.com',
-                password_hash=generate_password_hash('adminpass123'),
-                role='admin'
+# Helper functions for initial setup
+def create_default_payment_plans():
+    logger.info("Creating default payment plans")
+
+    plans = [
+        {
+            'name': 'Free Trial',
+            'slug': 'free-trial',
+            'description': 'Access to basic modules for 14 days.',
+            'price_usd': 0,
+            'duration_days': 14
+        },
+        {
+            'name': 'Yearly Access',
+            'slug': 'yearly',
+            'description': 'Full access to all modules and labs for 1 year.',
+            'price_usd': 9900,  # $99.00
+            'duration_days': 365
+        },
+        {
+            'name': 'Lifetime Access',
+            'slug': 'lifetime',
+            'description': 'Unlimited lifetime access to all content.',
+            'price_usd': 19900,  # $199.00
+            'duration_days': None
+        }
+    ]
+
+    for plan in plans:
+        existing = PaymentPlan.query.filter_by(slug=plan['slug']).first()
+        if not existing:
+            new_plan = PaymentPlan(
+                name=plan['name'],
+                slug=plan['slug'],
+                description=plan['description'],
+                price_usd=plan['price_usd'],
+                duration_days=plan['duration_days'],
+                is_active=True
             )
-            db.session.add(admin_user)
-            db.session.commit()
-            print("✅ Admin user created: admin / adminpass123")
-        else:
-            print("Admin user already exists")
+            db.session.add(new_plan)
 
-    app.run(debug=True, host='0.0.0.0', port=3000)
+    db.session.commit()
+    logger.info("Default payment plans created")
+
+def create_default_admin():
+    admin_username = os.getenv('ADMIN_USERNAME', 'admin')
+    admin_password = os.getenv('ADMIN_PASSWORD', 'adminpass123')
+
+    logger.info(f"Creating default admin user: {admin_username}")
+
+    existing_admin = User.query.filter_by(username=admin_username).first()
+    if not existing_admin:
+        admin_user = User(
+            username=admin_username,
+            email='admin@example.com',
+            password_hash=generate_password_hash(admin_password),
+            role='admin'
+        )
+        db.session.add(admin_user)
+        db.session.commit()
+        logger.info("Default admin user created")
+
+def create_default_module(module_name, title):
+    logger.info(f"Creating default module: {module_name}")
+
+    module_dir = os.path.join("modules_data", module_name)
+    os.makedirs(module_dir, exist_ok=True)
+
+    # Default content
+    content = f"""# {title}
+
+Welcome to the {title} module! This is a default module created by the system.
+
+## Getting Started
+
+This module will help you understand the basics. Edit this content in the admin dashboard.
+
+### Features
+
+- Easy to understand
+- Step-by-step instructions
+- Practical examples
+"""
+
+    # Create intro file
+    intro_file = os.path.join(module_dir, "introduction.md")
+    with open(intro_file, 'w') as f:
+        f.write(content)
+
+    # Add to database
+    try:
+        module = Module.query.filter_by(slug=module_name).first()
+        if not module:
+            module = Module(
+                title=title,
+                slug=module_name,
+                description=f"Default module for {title}",
+                trial_accessible=True
+            )
+            db.session.add(module)
+            db.session.commit()
+
+            # Add intro submodule
+            submodule = Submodule(
+                module_id=module.id,
+                title="Introduction",
+                content=content,
+                order=1
+            )
+            db.session.add(submodule)
+            db.session.commit()
+    except Exception as e:
+        logger.error(f"Error creating database module: {str(e)}")
+
+    logger.info(f"Default module created: {module_name}")
+
+if __name__ == '__main__':
+    init_app()
+    app.run(debug=True, host='0.0.0.0', port=5000)

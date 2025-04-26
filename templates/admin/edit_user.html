@@ -1,0 +1,88 @@
+{% extends "admin/dashboard.html" %}
+
+{% block title %}Edit User: {{ user.username }}{% endblock %}
+
+{% block content %}
+<div class="section-header">
+  <h2>Edit User: {{ user.username }}</h2>
+  <a href="{{ url_for('admin.manage_users') }}" class="btn btn-sm btn-secondary">
+    <i class="fas fa-arrow-left"></i> Back to Users
+  </a>
+</div>
+
+<div class="form-card">
+  <form method="POST">
+    {{ form.csrf_token }}
+
+    <div class="form-section">
+      <div class="form-section-title">User Information</div>
+
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input type="text" class="form-control" value="{{ user.username }}" disabled>
+        <small class="form-text">Username cannot be changed</small>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-control" value="{{ user.email }}" disabled>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Joined</label>
+        <input type="text" class="form-control" value="{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}" disabled>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Role & Permissions</div>
+
+      <div class="form-group">
+        <label class="form-label" for="role">Role</label>
+        {{ form.role(class="form-control") }}
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Subscription</div>
+
+      <div class="form-group">
+        <label class="form-label" for="plan_type">Subscription Plan</label>
+        {{ form.plan_type(class="form-control") }}
+        <small class="form-text">
+          Trial: 14 day access<br>
+          Yearly: 365 day access<br>
+          Lifetime: Unlimited access
+        </small>
+      </div>
+
+      {% if user.subscription %}
+      <div class="form-group">
+        <label class="form-label">Current Status</label>
+        <div>
+          <span class="subscription-badge plan-{{ user.subscription.plan_type }}">
+            {{ user.subscription.plan_type|title }}
+          </span>
+          {% if user.subscription.is_active() %}
+            <span class="subscription-badge plan-yearly">Active</span>
+          {% else %}
+            <span class="subscription-badge plan-trial">Inactive</span>
+          {% endif %}
+        </div>
+
+        {% if user.subscription.end_date %}
+        <small class="form-text">
+          Expires: {{ user.subscription.end_date.strftime('%Y-%m-%d') }}
+        </small>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="form-actions">
+      <a href="{{ url_for('admin.manage_users') }}" class="btn btn-secondary">Cancel</a>
+      {{ form.submit(class="btn btn-primary") }}
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "admin/dashboard.html" %}
+
+{% block title %}Upload Lab Material{% endblock %}
+
+{% block content %}
+<div class="section-header">
+  <h2>Upload Lab Material</h2>
+  <a href="{{ url_for('admin.manage_labs') }}" class="btn btn-sm btn-secondary">
+    <i class="fas fa-arrow-left"></i> Back to Labs
+  </a>
+</div>
+
+<div class="form-card">
+  <form method="POST" enctype="multipart/form-data">
+    {{ form.csrf_token }}
+
+    <div class="form-section">
+      <div class="form-section-title">Lab Information</div>
+
+      <div class="form-group">
+        <label class="form-label" for="module">Associated Module</label>
+        {{ form.module(class="form-control") }}
+        <small class="form-text">Select the module this lab belongs to</small>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="title">Lab Title</label>
+        {{ form.title(class="form-control", placeholder="e.g. Network Enumeration Lab") }}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="description">Description</label>
+        {{ form.description(class="form-control", placeholder="Brief description of the lab and its objectives...") }}
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Lab File</div>
+
+      <div class="form-group">
+        <label class="form-label">Upload Lab Material (ZIP file)</label>
+        <div class="file-upload">
+          <label for="lab_file" class="file-upload-label">
+            <span class="file-upload-icon"><i class="fas fa-file-archive"></i></span>
+            <span class="file-upload-text">Choose a ZIP file or drag and drop it here</span>
+          </label>
+          {{ form.lab_file(class="file-upload-input", id="lab_file") }}
+          <div id="file-preview" class="file-preview" style="display: none;"></div>
+        </div>
+        <small class="form-text">
+          The lab file should be a ZIP archive containing all necessary files for the lab exercise.
+          Maximum file size: 50MB
+        </small>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <a href="{{ url_for('admin.manage_labs') }}" class="btn btn-secondary">Cancel</a>
+      {{ form.submit(class="btn btn-primary") }}
+    </div>
+  </form>
+</div>
+
+<script>
+  // File upload preview
+  document.getElementById('lab_file').addEventListener('change', function() {
+    const filePreview = document.getElementById('file-preview');
+    filePreview.innerHTML = '';
+    filePreview.style.display = 'none';
+
+    if (this.files.length > 0) {
+      const file = this.files[0];
+      const fileSize = (file.size / 1024 / 1024).toFixed(2); // Convert to MB
+
+      filePreview.innerHTML = `
+        <strong>Selected file:</strong>
+        <div>
+          <i class="fas fa-file-archive"></i> 
+          ${file.name} (${fileSize} MB)
+        </div>
+      `;
+      filePreview.style.display = 'block';
+    }
+  });
+</script>
+{% endblock %}

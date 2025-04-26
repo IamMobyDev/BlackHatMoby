@@ -1,0 +1,114 @@
+{% extends "admin/dashboard.html" %}
+
+{% block title %}Platform Statistics{% endblock %}
+
+{% block content %}
+<div class="section-header">
+  <h2>Platform Statistics</h2>
+</div>
+
+<!-- Overview Stats -->
+<div class="stats-grid">
+  <div class="stats-card">
+    <div class="stats-card-header">
+      <div class="stats-title">Users</div>
+      <div class="stats-icon"><i class="fas fa-users"></i></div>
+    </div>
+    <div class="stats-value">{{ stats.total_users }}</div>
+    <div class="chart-container">
+      <div class="bar-chart">
+        {% for plan_type, count in stats.subscription_distribution.items() %}
+          <div class="bar" style="height: {% if stats.total_users > 0 %}{{ (count / stats.total_users * 100)|round }}{% else %}0{% endif %}%;">
+            <div class="bar-value">{{ count }}</div>
+            <div class="bar-label">{{ plan_type|title }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-card">
+    <div class="stats-card-header">
+      <div class="stats-title">Content</div>
+      <div class="stats-icon"><i class="fas fa-book"></i></div>
+    </div>
+    <div class="stats-value">{{ stats.total_modules }} modules / {{ stats.total_submodules }} submodules</div>
+    <div class="chart-container">
+      <div class="bar-chart">
+        <div class="bar" style="height: 100%;">
+          <div class="bar-value">{{ stats.total_modules }}</div>
+          <div class="bar-label">Modules</div>
+        </div>
+        <div class="bar" style="height: {% if stats.total_modules > 0 %}{{ (stats.total_submodules / stats.total_modules * 100)|round|min(100) }}{% else %}0{% endif %}%;">
+          <div class="bar-value">{{ stats.total_submodules }}</div>
+          <div class="bar-label">Submodules</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Popular Modules -->
+<div class="stats-card">
+  <div class="stats-card-header">
+    <div class="stats-title">Popular Modules</div>
+    <div class="stats-icon"><i class="fas fa-chart-bar"></i></div>
+  </div>
+
+  {% if stats.popular_modules %}
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th>Module</th>
+          <th>Completions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for module in stats.popular_modules %}
+          <tr>
+            <td>{{ module.title }}</td>
+            <td>{{ module.count }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty-state" style="padding: var(--spacing-md);">
+      <p>No module completions recorded yet.</p>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Recent Completions -->
+<div class="stats-card">
+  <div class="stats-card-header">
+    <div class="stats-title">Recent Completions</div>
+    <div class="stats-icon"><i class="fas fa-check-circle"></i></div>
+  </div>
+
+  {% if stats.recent_completions %}
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Module</th>
+          <th>Completed</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for completion in stats.recent_completions %}
+          <tr>
+            <td>{{ completion.username }}</td>
+            <td>{{ completion.module }}</td>
+            <td>{{ completion.completed_at }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty-state" style="padding: var(--spacing-md);">
+      <p>No recent module completions.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

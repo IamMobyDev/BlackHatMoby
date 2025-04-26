@@ -1,0 +1,63 @@
+{% extends "admin/dashboard.html" %}
+
+{% block title %}Manage Users{% endblock %}
+
+{% block content %}
+<div class="section-header">
+  <h2>User Management</h2>
+</div>
+
+{% if users %}
+<table class="user-list">
+  <thead>
+    <tr>
+      <th>User</th>
+      <th>Email</th>
+      <th>Role</th>
+      <th>Subscription</th>
+      <th>Joined</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for user in users %}
+    <tr>
+      <td>
+        <div style="display: flex; align-items: center;">
+          <img src="{{ url_for('static', filename='gui/avatar.png') }}" alt="{{ user.username }}" class="user-avatar-small">
+          <span>{{ user.username }}</span>
+        </div>
+      </td>
+      <td>{{ user.email }}</td>
+      <td>
+        <span class="user-role role-{{ user.role }}">{{ user.role }}</span>
+      </td>
+      <td>
+        {% if user.subscription %}
+          <span class="subscription-badge plan-{{ user.subscription.plan_type }}">
+            {{ user.subscription.plan_type|title }}
+            {% if user.subscription.end_date %}
+              (Expires: {{ user.subscription.end_date.strftime('%Y-%m-%d') }})
+            {% endif %}
+          </span>
+        {% else %}
+          <span class="subscription-badge plan-trial">No Subscription</span>
+        {% endif %}
+      </td>
+      <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+      <td>
+        <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-sm btn-edit">
+          <i class="fas fa-user-edit"></i> Edit
+        </a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon"><i class="fas fa-users"></i></div>
+  <p>No users found in the system.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | Black Mink Labs</title>
+  <link href="{{ url_for('static', filename='style/style.css') }}" rel="stylesheet" />
+  <link href="{{ url_for('static', filename='style/admin.css') }}" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="admin-sidebar">
+      <div class="sidebar-header">
+        <img src="{{ url_for('static', filename='gui/mink1.png') }}" alt="Logo" class="logo">
+        <h2>Admin Panel</h2>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <a href="{{ url_for('admin.dashboard') }}" class="nav-item {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
+          <i class="fas fa-tachometer-alt"></i> Dashboard
+        </a>
+        <a href="{{ url_for('admin.create_module') }}" class="nav-item {% if request.endpoint == 'admin.create_module' %}active{% endif %}">
+          <i class="fas fa-plus-circle"></i> Create Content
+        </a>
+        <a href="{{ url_for('admin.manage_labs') }}" class="nav-item {% if request.endpoint == 'admin.manage_labs' %}active{% endif %}">
+          <i class="fas fa-flask"></i> Lab Materials
+        </a>
+        <a href="{{ url_for('admin.manage_users') }}" class="nav-item {% if request.endpoint == 'admin.manage_users' %}active{% endif %}">
+          <i class="fas fa-users"></i> Manage Users
+        </a>
+        <a href="{{ url_for('admin.stats') }}" class="nav-item {% if request.endpoint == 'admin.stats' %}active{% endif %}">
+          <i class="fas fa-chart-bar"></i> Statistics
+        </a>
+        <div class="nav-divider"></div>
+        <a href="{{ url_for('modules') }}" class="nav-item">
+          <i class="fas fa-book"></i> View Modules
+        </a>
+        <a href="{{ url_for('logout') }}" class="nav-item">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <button id="theme-toggle" class="theme-toggle">
+          <i class="fas fa-moon dark-icon"></i>
+          <i class="fas fa-sun light-icon"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="admin-main">
+      <div class="admin-header">
+        <div class="header-left">
+          <button id="sidebar-toggle" class="sidebar-toggle">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="page-title">{% block title %}Dashboard{% endblock %}</h1>
+        </div>
+        <div class="header-right">
+          <div class="admin-user">
+            <span>Admin</span>
+            <img src="{{ url_for('static', filename='gui/avatar.png') }}" alt="Admin" class="user-avatar">
+          </div>
+        </div>
+      </div>
+
+      <!-- Alert Messages -->
+      {% if msg %}
+      <div class="alert alert-success">
+        <i class="fas fa-check-circle"></i>
+        <span>{{ msg }}</span>
+        <button class="alert-close"><i class="fas fa-times"></i></button>
+      </div>
+      {% endif %}
+      
+      {% if error %}
+      <div class="alert alert-error">
+        <i class="fas fa-exclamation-circle"></i>
+        <span>{{ error }}</span>
+        <button class="alert-close"><i class="fas fa-times"></i></button>
+      </div>
+      {% endif %}
+
+      <!-- Main Content Block -->
+      <div class="content">
+        {% block content %}
+        <!-- Dashboard Overview Cards -->
+        <div class="overview-cards">
+          <div class="card">
+            <div class="card-icon"><i class="fas fa-book"></i></div>
+            <div class="card-info">
+              <h3>{{ modules|length }}</h3>
+              <p>Total Modules</p>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-icon"><i class="fas fa-file-alt"></i></div>
+            <div class="card-info">
+              {% set submodule_count = 0 %}
+              {% for module_name, submodules in modules.items() %}
+                {% set submodule_count = submodule_count + submodules|length %}
+              {% endfor %}
+              <h3>{{ submodule_count }}</h3>
+              <p>Total Submodules</p>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-icon"><i class="fas fa-users"></i></div>
+            <div class="card-info">
+              <h3>-</h3>
+              <p>Registered Users</p>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-icon"><i class="fas fa-flask"></i></div>
+            <div class="card-info">
+              <h3>-</h3>
+              <p>Lab Materials</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+          <h2>Quick Actions</h2>
+          <div class="action-buttons">
+            <a href="{{ url_for('admin.create_module') }}" class="btn btn-primary">
+              <i class="fas fa-plus"></i> New Module
+            </a>
+            <a href="{{ url_for('admin.upload_lab') }}" class="btn btn-secondary">
+              <i class="fas fa-upload"></i> Upload Lab
+            </a>
+            <a href="{{ url_for('admin.manage_users') }}" class="btn btn-secondary">
+              <i class="fas fa-user-cog"></i> Manage Users
+            </a>
+          </div>
+        </div>
+
+        <!-- Module Management Section -->
+        <div class="modules-management">
+          <div class="section-header">
+            <h2>Module Management</h2>
+            <a href="{{ url_for('admin.create_module') }}" class="btn btn-sm">Add New</a>
+          </div>
+
+          {% if modules %}
+            {% for folder, submodules in modules.items() %}
+              <div class="module-section">
+                <div class="module-header">
+                  <span class="module-name">{{ folder.replace('-', ' ').title() }}</span>
+                  <span class="module-count">{{ submodules|length }} submodule(s)</span>
+                  <button class="module-toggle"><i class="fas fa-chevron-down"></i></button>
+                </div>
+                <div class="module-content">
+                  <table class="module-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>File</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for module in submodules %}
+                        <tr>
+                          <td>{{ module.slug.replace('-', ' ').title() }}</td>
+                          <td><code>{{ module.filename }}</code></td>
+                          <td class="actions">
+                            <a href="{{ url_for('admin.edit_module', module=module.module, slug=module.slug) }}" class="btn btn-sm btn-edit" title="Edit">
+                              <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST" action="{{ url_for('admin.delete_module', module=module.module, slug=module.slug) }}" class="inline-form" onsubmit="return confirm('Are you sure you want to delete {{ module.slug }}?');">
+                              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                              <button type="submit" class="btn btn-sm btn-delete" title="Delete">
+                                <i class="fas fa-trash"></i>
+                              </button>
+                            </form>
+                            <a href="{{ url_for('view_submodule', module=module.module, slug=module.slug) }}" class="btn btn-sm btn-view" title="View" target="_blank">
+                              <i class="fas fa-eye"></i>
+                            </a>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty-state">
+              <div class="empty-icon"><i class="fas fa-folder-open"></i></div>
+              <p>No modules found yet. Click "Add New" to create your first module.</p>
+            </div>
+          {% endif %}
+        </div>
+        {% endblock %}
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Sidebar toggle
+    document.getElementById('sidebar-toggle').addEventListener('click', function() {
+      document.querySelector('.admin-layout').classList.toggle('sidebar-collapsed');
+    });
+
+    // Theme toggle
+    const themeToggle = document.getElementById('theme-toggle');
+    const body = document.body;
+    const savedTheme = localStorage.getItem('admin-theme');
+
+    // Apply saved theme
+    if (savedTheme === 'dark') {
+      body.classList.add('dark-mode');
+    }
+
+    themeToggle.addEventListener('click', function() {
+      body.classList.toggle('dark-mode');
+      localStorage.setItem('admin-theme', body.classList.contains('dark-mode') ? 'dark' : 'light');
+    });
+
+    // Alert close buttons
+    document.querySelectorAll('.alert-close').forEach(button => {
+      button.addEventListener('click', function() {
+        this.closest('.alert').style.display = 'none';
+      });
+    });
+
+    // Module section toggles
+    document.querySelectorAll('.module-toggle').forEach(toggle => {
+      toggle.addEventListener('click', function() {
+        const moduleSection = this.closest('.module-section');
+        moduleSection.classList.toggle('collapsed');
+        
+        const icon = this.querySelector('i');
+        if (moduleSection.classList.contains('collapsed')) {
+          icon.classList.replace('fa-chevron-down', 'fa-chevron-right');
+        } else {
+          icon.classList.replace('fa-chevron-right', 'fa-chevron-down');
+        }
+      });
+    });
+
+    // Collapse all modules initially except the first one
+    const moduleSections = document.querySelectorAll('.module-section');
+    if (moduleSections.length > 0) {
+      for (let i = 1; i < moduleSections.length; i++) {
+        const moduleSection = moduleSections[i];
+        moduleSection.classList.add('collapsed');
+        
+        const icon = moduleSection.querySelector('.module-toggle i');
+        icon.classList.replace('fa-chevron-down', 'fa-chevron-right');
+      }
+    }
+  </script>
+</body>
+</html>
